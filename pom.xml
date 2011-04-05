@@ -1,0 +1,93 @@
+<project xmlns="http://maven.apache.org/POM/4.0.0" 
+	xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" 
+	xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/maven-v4_0_0.xsd">
+    <modelVersion>4.0.0</modelVersion>
+
+    <groupId>com.cataclysmicrewind</groupId>
+    <artifactId>camera-detection</artifactId>
+	<version>1.0</version>
+    <packaging>swc</packaging>
+    <name>AS3 Camera Detection</name>
+
+    <properties>
+	    <flex.version>4.0.0.14159</flex.version>
+        <flexmojos.version>4.0-beta-7</flexmojos.version>
+        <flex.debug>false</flex.debug>
+    </properties>
+
+    <build>
+        <sourceDirectory>src/main/flash</sourceDirectory>
+        <!-- <testSourceDirectory>src/test/flex</testSourceDirectory> -->
+        <plugins>
+            <plugin>
+                <groupId>org.sonatype.flexmojos</groupId>
+                <artifactId>flexmojos-maven-plugin</artifactId>
+                <version>${flexmojos.version}</version>
+                <extensions>true</extensions>
+                <configuration>
+                    <targetPlayer>9.0.0</targetPlayer>
+                    <debug>${flex.debug}</debug>
+                    <strict>true</strict>
+                </configuration>
+                <dependencies>
+                    <dependency>
+                        <groupId>com.adobe.flex</groupId>
+                        <artifactId>compiler</artifactId>
+                        <version>${flex.version}</version>
+                        <type>pom</type>
+                    </dependency>
+                </dependencies>
+            </plugin>
+        </plugins>
+        <defaultGoal>install</defaultGoal>
+    </build>
+
+    <dependencies>
+		<!-- Flex framework resource bundles -->
+        <dependency>
+          <groupId>com.adobe.flex.framework</groupId>
+          <artifactId>framework</artifactId>
+          <version>${flex.version}</version>
+          <type>rb.swc</type>
+        </dependency>
+        <dependency>
+          <groupId>com.adobe.flex.framework</groupId>
+          <artifactId>framework</artifactId>
+          <version>${flex.version}</version>
+          <type>zip</type>
+          <classifier>configs</classifier>
+        </dependency>
+        <dependency>
+          <groupId>com.adobe.flex.framework</groupId>
+          <artifactId>framework</artifactId>
+          <version>${flex.version}</version>
+          <type>rb.swc</type>
+        </dependency>
+
+        <dependency>
+            <groupId>com.adobe.flex.framework</groupId>
+            <artifactId>playerglobal</artifactId>
+            <version>${flex.version}</version>
+            <classifier>10.0</classifier>
+            <type>swc</type>
+        </dependency>
+    </dependencies>
+
+    <repositories>
+        <repository>
+            <id>flex-mojos-repository</id>
+            <url>http://repository.sonatype.org/content/groups/flexgroup/</url>
+            <releases> <enabled>true</enabled> </releases>
+            <snapshots> <enabled>false</enabled> </snapshots>
+        </repository>
+    </repositories>
+    <pluginRepositories>
+        <pluginRepository>
+            <id>local</id>
+            <url>http://repository.sonatype.org/content/groups/flexgroup/</url>
+            <releases> <enabled>true</enabled> </releases>
+            <snapshots> <enabled>false</enabled> </snapshots>
+        </pluginRepository>
+    </pluginRepositories>
+
+</project>
