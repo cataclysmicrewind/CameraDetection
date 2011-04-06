@@ -4,22 +4,22 @@
 <META http-equiv="Content-Type" content="text/html; charset=UTF-8">
 <link rel="stylesheet" href="../../style.css" type="text/css" media="screen">
 <link rel="stylesheet" href="../../print.css" type="text/css" media="print">
-<meta content="CameraDetection,ktu.media.CameraDetection,detectionDelay,detectionRepeatCount,rememberedPermissions,begin,dispose" name="keywords">
-<title>ktu.media.CameraDetection</title>
+<meta content="CameraDetectionVerbose,ktu.media.CameraDetectionVerbose,output,detectionDelay,detectionRepeatCount,rememberedPermissions,begin,dispose" name="keywords">
+<title>ktu.media.CameraDetectionVerbose</title>
 </head>
 <body>
 <script type="text/javascript" language="javascript" src="../../asdoc.js"></script><script type="text/javascript" language="javascript" src="../../cookies.js"></script><script type="text/javascript" language="javascript">
 <!--
-				asdocTitle = 'CameraDetection - API Documentation';
+				asdocTitle = 'CameraDetectionVerbose - API Documentation';
 				var baseRef = '../../';
 				window.onload = configPage;
 			--></script>
 <table style="display:none" id="titleTable" cellspacing="0" cellpadding="0" class="titleTable">
 <tr>
-<td align="left" class="titleTableTitle">CameraDetection Docs</td><td align="right" class="titleTableTopNav"><a onclick="loadClassListFrame('../../all-classes.html')" href="../../package-summary.html">All&nbsp;Packages</a>&nbsp;|&nbsp;<a onclick="loadClassListFrame('../../all-classes.html')" href="../../class-summary.html">All&nbsp;Classes</a>&nbsp;|&nbsp;<a onclick="loadClassListFrame('../../index-list.html')" href="../../all-index-A.html">Index</a>&nbsp;|&nbsp;<a href="../../index.html?ktu/media/CameraDetection.html&amp;ktu/media/class-list.html" id="framesLink1">Frames</a><a onclick="parent.location=document.location" href="" style="display:none" id="noFramesLink1">No&nbsp;Frames</a></td><td rowspan="3" align="right" class="titleTableLogo"><img alt="Adobe Logo" title="Adobe Logo" class="logoImage" src="../../images/logo.jpg"></td>
+<td align="left" class="titleTableTitle">CameraDetection Docs</td><td align="right" class="titleTableTopNav"><a onclick="loadClassListFrame('../../all-classes.html')" href="../../package-summary.html">All&nbsp;Packages</a>&nbsp;|&nbsp;<a onclick="loadClassListFrame('../../all-classes.html')" href="../../class-summary.html">All&nbsp;Classes</a>&nbsp;|&nbsp;<a onclick="loadClassListFrame('../../index-list.html')" href="../../all-index-A.html">Index</a>&nbsp;|&nbsp;<a href="../../index.html?ktu/media/CameraDetectionVerbose.html&amp;ktu/media/class-list.html" id="framesLink1">Frames</a><a onclick="parent.location=document.location" href="" style="display:none" id="noFramesLink1">No&nbsp;Frames</a></td><td rowspan="3" align="right" class="titleTableLogo"><img alt="Adobe Logo" title="Adobe Logo" class="logoImage" src="../../images/logo.jpg"></td>
 </tr>
 <tr class="titleTableRow2">
-<td align="left" id="subTitle" class="titleTableSubTitle">Class&nbsp;CameraDetection</td><td align="right" id="subNav" class="titleTableSubNav"><a href="#propertySummary">Properties</a>&nbsp;| <a href="#methodSummary">Methods</a>&nbsp;| <a href="#eventSummary">Events</a></td>
+<td align="left" id="subTitle" class="titleTableSubTitle">Class&nbsp;CameraDetectionVerbose</td><td align="right" id="subNav" class="titleTableSubNav"><a href="#propertySummary">Properties</a>&nbsp;| <a href="#methodSummary">Methods</a>&nbsp;| <a href="#eventSummary">Events</a></td>
 </tr>
 <tr class="titleTableRow3">
 <td colspan="2">&nbsp;</td>
@@ -27,7 +27,7 @@
 </table>
 <script type="text/javascript" language="javascript">
 <!--
-if (!isEclipse() || window.name != ECLIPSE_FRAME_NAME) {titleBar_setSubTitle("Class CameraDetection"); titleBar_setSubNav(false,true,false,false,true,false,true,false,false,false,false,false,false,false);}
+if (!isEclipse() || window.name != ECLIPSE_FRAME_NAME) {titleBar_setSubTitle("Class CameraDetectionVerbose"); titleBar_setSubNav(false,true,false,false,true,false,true,false,false,false,false,false,false,false);}
 --></script>
 <div class="MainContent">
 <table cellspacing="0" cellpadding="0" class="classHeaderTable">
@@ -35,10 +35,10 @@ if (!isEclipse() || window.name != ECLIPSE_FRAME_NAME) {titleBar_setSubTitle("Cl
 <td class="classHeaderTableLabel">Package</td><td><a onclick="javascript:loadClassListFrame('class-list.html')" href="package-detail.html">ktu.media</a></td>
 </tr>
 <tr>
-<td class="classHeaderTableLabel">Class</td><td class="classSignature">public class CameraDetection</td>
+<td class="classHeaderTableLabel">Class</td><td class="classSignature">public class CameraDetectionVerbose</td>
 </tr>
 <tr>
-<td class="classHeaderTableLabel">Inheritance</td><td class="inheritanceList">CameraDetection <img class="inheritArrow" alt="Inheritance" title="Inheritance" src="../../images/inherit-arrow.gif"> flash.events.EventDispatcher</td>
+<td class="classHeaderTableLabel">Inheritance</td><td class="inheritanceList">CameraDetectionVerbose <img class="inheritArrow" alt="Inheritance" title="Inheritance" src="../../images/inherit-arrow.gif"> flash.events.EventDispatcher</td>
 </tr>
 <tr>
 <td class="classHeaderTableLabel">Implements</td><td><a href="../../com/gskinner/utils/IDisposable.html">IDisposable</a></td>
@@ -143,19 +143,24 @@ if (!isEclipse() || window.name != ECLIPSE_FRAME_NAME) {titleBar_setSubTitle("Cl
    delay property of the timer used while checking a Camera object            <br>
       This value along with the detectionRepeatCount property will determine how long this object will spend
    checking each Camera object.</div>
-</td><td class="summaryTableOwnerCol">CameraDetection</td>
+</td><td class="summaryTableOwnerCol">CameraDetectionVerbose</td>
 </tr>
 <tr class="">
 <td class="summaryTablePaddingCol">&nbsp;</td><td class="summaryTableInheritanceCol">&nbsp;</td><td class="summaryTableSignatureCol"><a class="signatureLink" href="#detectionRepeatCount">detectionRepeatCount</a> : uint<div class="summaryTableDescription">
    repeatCount property of the timer used while checking a Camera object          <br>
       This value along with the detectionDelay property will determine how long this object will spend
    checking each Camera object.</div>
-</td><td class="summaryTableOwnerCol">CameraDetection</td>
+</td><td class="summaryTableOwnerCol">CameraDetectionVerbose</td>
+</tr>
+<tr class="">
+<td class="summaryTablePaddingCol">&nbsp;</td><td class="summaryTableInheritanceCol">&nbsp;</td><td class="summaryTableSignatureCol"><a class="signatureLink" href="#output">output</a> : Function<div class="summaryTableDescription">
+         output is a function that accepts a string parameter.</div>
+</td><td class="summaryTableOwnerCol">CameraDetectionVerbose</td>
 </tr>
 <tr class="">
 <td class="summaryTablePaddingCol">&nbsp;</td><td class="summaryTableInheritanceCol">&nbsp;</td><td class="summaryTableSignatureCol"><a class="signatureLink" href="#rememberedPermissions">rememberedPermissions</a> : Boolean<div class="summaryTableDescription">[read-only]
          property telling wether the user had previously chosen 'remember my decision' in the settings dialog.</div>
-</td><td class="summaryTableOwnerCol">CameraDetection</td>
+</td><td class="summaryTableOwnerCol">CameraDetectionVerbose</td>
 </tr>
 </table>
 </div>
@@ -169,10 +174,10 @@ if (!isEclipse() || window.name != ECLIPSE_FRAME_NAME) {titleBar_setSubTitle("Cl
 <tr class="">
 <td class="summaryTablePaddingCol">&nbsp;</td><td class="summaryTableInheritanceCol">&nbsp;</td><td class="summaryTableSignatureCol">
 <div class="summarySignature">
-<a class="signatureLink" href="#CameraDetection()">CameraDetection</a>(stage:Stage)</div>
+<a class="signatureLink" href="#CameraDetectionVerbose()">CameraDetectionVerbose</a>(stage:Stage)</div>
 <div class="summaryTableDescription">
        Very sad to say, that a reference to the stage is required with the new fix.</div>
-</td><td class="summaryTableOwnerCol">CameraDetection</td>
+</td><td class="summaryTableOwnerCol">CameraDetectionVerbose</td>
 </tr>
 <tr class="">
 <td class="summaryTablePaddingCol">&nbsp;</td><td class="summaryTableInheritanceCol">&nbsp;</td><td class="summaryTableSignatureCol">
@@ -180,7 +185,7 @@ if (!isEclipse() || window.name != ECLIPSE_FRAME_NAME) {titleBar_setSubTitle("Cl
 <a class="signatureLink" href="#begin()">begin</a>():void</div>
 <div class="summaryTableDescription">
    begin searching for the first working Camera object.</div>
-</td><td class="summaryTableOwnerCol">CameraDetection</td>
+</td><td class="summaryTableOwnerCol">CameraDetectionVerbose</td>
 </tr>
 <tr class="">
 <td class="summaryTablePaddingCol">&nbsp;</td><td class="summaryTableInheritanceCol">&nbsp;</td><td class="summaryTableSignatureCol">
@@ -190,7 +195,7 @@ if (!isEclipse() || window.name != ECLIPSE_FRAME_NAME) {titleBar_setSubTitle("Cl
    disposes of all objects holding memory in this class                    <br>
                                     <br>
    This method will prepare all objects in this class for garbage collection.</div>
-</td><td class="summaryTableOwnerCol">CameraDetection</td>
+</td><td class="summaryTableOwnerCol">CameraDetectionVerbose</td>
 </tr>
 </table>
 </div>
@@ -207,7 +212,7 @@ if (!isEclipse() || window.name != ECLIPSE_FRAME_NAME) {titleBar_setSubTitle("Cl
 <a class="signatureLink" href="#event:cameraResolved">cameraResolved</a>
 </div>
 </td><td class="summaryTableDescription summaryTableCol">
-   dispatched when the class has finished checking the cameras.</td><td class="summaryTableOwnerCol">CameraDetection</td>
+   dispatched when the class has finished checking the cameras.</td><td class="summaryTableOwnerCol">CameraDetectionVerbose</td>
 </tr>
 </table>
 </div>
@@ -254,6 +259,18 @@ showHideInherited();
 <code>&nbsp;&nbsp;&nbsp;&nbsp;public function set detectionRepeatCount(value:uint):void</code>
 <br>
 </div>
+<a name="output"></a>
+<table cellspacing="0" cellpadding="0" class="detailHeader">
+<tr>
+<td class="detailHeaderName">output</td><td class="detailHeaderType">property</td><td class="detailHeaderRule">&nbsp;</td>
+</tr>
+</table>
+<div class="detailBody">
+<code>public var output:Function</code><p>
+         output is a function that accepts a string parameter.
+         It is designed to be able to see everything the class is doing.
+                  </p><p>The default value is <code>trace It uses the trace function as a default.</code>.</p>
+</div>
 <a name="rememberedPermissions"></a>
 <table cellspacing="0" cellpadding="0" class="detailHeader">
 <tr>
@@ -277,14 +294,14 @@ showHideInherited();
 </div>
 <a name="constructorDetail"></a>
 <div class="detailSectionHeader">Constructor detail</div>
-<a name="CameraDetection()"></a>
+<a name="CameraDetectionVerbose()"></a>
 <table cellspacing="0" cellpadding="0" class="detailHeader">
 <tr>
-<td class="detailHeaderName">CameraDetection</td><td class="detailHeaderParens">()</td><td class="detailHeaderType">constructor</td>
+<td class="detailHeaderName">CameraDetectionVerbose</td><td class="detailHeaderParens">()</td><td class="detailHeaderType">constructor</td>
 </tr>
 </table>
 <div class="detailBody">
-<code>public function CameraDetection(stage:Stage)</code><p>
+<code>public function CameraDetectionVerbose(stage:Stage)</code><p>
        Very sad to say, that a reference to the stage is required with the new fix.         <br/>
                                <br/>
     The Problem:                         <br/>

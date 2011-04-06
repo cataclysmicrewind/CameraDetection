@@ -83,6 +83,7 @@ package ktu.media {
 				break;
             case CameraDetectionResult.NO_SUCCESS:
                 trace("No Cameras in the list responded properly");
+				break;
 			case CameraDetectionResult.NO_PERMISSION :
 				trace("Camera access denied");
 				break;
@@ -92,20 +93,20 @@ package ktu.media {
 		}
 	}																														</listing>
 	 *
-     * 
-     * 
-     * 
-     * 
+     *
+     *
+     *	PERMISSIONS TESTING:
+     *
      *  These are the results of my testing for permissions:
-     * 
+     *
      *  I conducted a thorough study of which methods produce which results when looking for permission from the user
      * After all of my tweaks and changes, I was able to get proper results for all scenarios using both methods.
-     * 
-     * There are two methods. One, using video.attachCamera() to pop up the 'quick' permission dialog, 
+     *
+     * There are two methods. One, using video.attachCamera() to pop up the 'quick' permission dialog,
      * and the Security.showSettings() method which will ignore any choice of remember, and cause a two click process (on average)
-     * 
+     *
      * Below are the results from my testing. Here is the procedure of each test:
-     * 
+     *
      * Open
      * cameraDetection.begin()
      * permission box shows up
@@ -115,19 +116,19 @@ package ktu.media {
      * dispose of camera
      * cameraDetection.begin()
      * Wait for CameraDetectionResult
-     * 
+     *
      * The idea, is that if you use the quick settings, and you selected to remember my decision, the dialog will not show up at all
      * So, if you 'remember' allow, it should be ok. If you 'remember' deny, then CameraDetection should dispatch with NO_PERMISSION and so on...
-     * 
-     * 
-     *  LEGEND: 
+     *
+     *
+     *  LEGEND:
      *      Yes = Remember my decision
      *      No = do not remember my decision
      *      Settings = the full settings dialog (which requires at least two clicks)
      *      Quick = the short permissions dialog
      *      Deny = I chose to deny permission
      *      Allow = I chose to allow permission
-     * 
+     *
      * _video.attachCamera(_camera);
      *
      *  Yes - Quick    - Deny   =   NO_PERMISSION
@@ -143,12 +144,12 @@ package ktu.media {
      * 	Yes - Settings - Deny   =   NO_PERMISSION
      * 	Yes - Settings - Allow  =   SUCCESS
      *
-     * 
-     * 
-     * 
-     * 
-     * 
-     * 
+     *
+     *
+     *
+     *
+     *
+     *
 	 * I chose to implement Grant Skinners IDisposable because I think its good practice
 	 *
 	 */
@@ -175,7 +176,7 @@ package ktu.media {
 		private var _numTimesGoodCamera			:int		= 0;                    // number of times this camera has shown to work during a single check
 		private var _minTimesGood				:int 		= 3;                    // the min number of times a camera must respond as working
         private var _rememberedPermissions      :Boolean    = false;                // true = the permissions dialog did not show once || false = permissions dialog did show
-        
+
 		private var _stage						:Stage;                             // ref to the stage for permissions checking
 		
 		
@@ -188,7 +189,7 @@ package ktu.media {
 		 * 		Developer uses attachCamera function to trigger the dialog asking for permission,							<br/>
 		 * 		The dialog simply never shows up.																			<br/>
 		 *																													<br/>
-		 * The Fix:																											<br/>
+		 *  The Fix:																										<br/>
 		 * 		* Thanks to Philippe Piernot for the code from https://bugs.adobe.com/jira/browse/FP-41						<br/>
 		 *																													<br/>
 		 * 		Attempt to draw the stage into a BitmapData using bitmap.draw();											<br/>
@@ -225,9 +226,16 @@ package ktu.media {
 		}
         /**
          * property telling wether the user had previously chosen 'remember my decision' in the settings dialog.
-         * 
+         *
          * This value is used for statistics only. It is interesting to find if users are actually using 'remember' and thus
          *  we can determine how our users use the application.
+		 *
+		 * This property is only useful the FIRST time you run the code. If the user selects allow, then you dispose the camera
+		 * and detect the camera again, the class will think they selected remember. Where the real issue is that they have already given
+		 * this session permission.
+		 *
+		 * NOTE: since cameraDetection automatically calls dispose() when it's done, be wary of garbage collection... If accessed
+		 * 		 in the event that is dispatched you will be fine, but after it may not be around if you have no other references to the object.
          */
         public function get rememberedPermissions ():Boolean {
             return _rememberedPermissions;
@@ -244,10 +252,14 @@ package ktu.media {
 			
 			if (_numCameras == 0 || !Capabilities.hasVideoEncoder)
 /* FAIL */		dispatch (CameraDetectionResult.NO_CAMERAS);
-            
+
 			getDefaultCamera ();
+			
+			if (!_camera)
+/* FAIL */		dispatch (CameraDetectionResult.NO_CAMERAS);		// just in case?
+			
 			if (!_camera.muted) {
-                _rememberedPermissions = true;  // its allow, no dialog needs to show
+                _rememberedPermissions = true;  // if default camera is not muted, then remember was checked with allow, no dialog will show
 				havePermissions ();
 			} else {
 				askPermission ();
@@ -291,7 +303,7 @@ package ktu.media {
 		 * begin checking a camera
 		 *
 		 * 	resets values, add eventlistener, attach camera to video, then start the timer
-         * 
+         *
          * we are checking a new camera, so the values must be reset. The Activity event must be listened for
          * otherwise that value does not get updated.
 		 *
@@ -322,7 +334,7 @@ package ktu.media {
 				_camera = Camera.getCamera ( String (_currentCameraIndex) );
 				_currentCameraIndex ++;
 				if (_camera.name == _defaultCameraName) {
-					nextCamera ();  // skip it because it always gets checked first, and should be checked twice
+					nextCamera ();  // skip it because it always gets checked first, and shouldn't be checked twice
 				} else {
 					checkCamera ();
 				}
@@ -358,10 +370,10 @@ package ktu.media {
 						if (_numTimesGoodCamera > _minTimesGood)
 /* SUCCESS */				dispatch (CameraDetectionResult.SUCCESS);
 					}
-				break;
+					break;
 				case TimerEvent.TIMER_COMPLETE:
 					nextCamera ();	// we have bad camera, Try the next one
-				break;
+					break;
 			}
 		}
 		/** @private

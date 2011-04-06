@@ -37,6 +37,7 @@ package ktu.media {
 	 * 	function onCameraResolve (e:CameraDetectionEvent):void {
 	 * 		switch (e.code) {
 	 * 			case CameraDetectionResult.SUCCESS:
+     *          case CameraDetectionResult.NO_SUCCESS:
 	 * 			case CameraDetectionResult.NO_CAMERAS:
 	 * 			case CameraDetectionResult.NO_PERMISSION:
 	 * 		}
@@ -80,48 +81,108 @@ package ktu.media {
 			case CameraDetectionResult.SUCCESS :
 				video.attachCamera(e.camera);
 				break;
+            case CameraDetectionResult.NO_SUCCESS:
+                trace("No Cameras in the list responded properly");
+				break;
 			case CameraDetectionResult.NO_PERMISSION :
-				output("Camera access denied");
+				trace("Camera access denied");
 				break;
 			case CameraDetectionResult.NO_CAMERAS :
-				output("There are no suitable cameras connected to the computer");
+				trace("There are no Cameras installed");
 				break;
 		}
 	}																														</listing>
 	 *
+     *
+     *
+     *	PERMISSIONS TESTING:
+     *
+     *  These are the results of my testing for permissions:
+     *
+     *  I conducted a thorough study of which methods produce which results when looking for permission from the user
+     * After all of my tweaks and changes, I was able to get proper results for all scenarios using both methods.
+     *
+     * There are two methods. One, using video.attachCamera() to pop up the 'quick' permission dialog,
+     * and the Security.showSettings() method which will ignore any choice of remember, and cause a two click process (on average)
+     *
+     * Below are the results from my testing. Here is the procedure of each test:
+     *
+     * Open
+     * cameraDetection.begin()
+     * permission box shows up
+     * I make a choice
+     *      depending on the criteria for the test, I choose remember or not
+     * Wait for CameraDetectionResult
+     * dispose of camera
+     * cameraDetection.begin()
+     * Wait for CameraDetectionResult
+     *
+     * The idea, is that if you use the quick settings, and you selected to remember my decision, the dialog will not show up at all
+     * So, if you 'remember' allow, it should be ok. If you 'remember' deny, then CameraDetection should dispatch with NO_PERMISSION and so on...
+     *
+     *
+     *  LEGEND:
+     *      Yes = Remember my decision
+     *      No = do not remember my decision
+     *      Settings = the full settings dialog (which requires at least two clicks)
+     *      Quick = the short permissions dialog
+     *      Deny = I chose to deny permission
+     *      Allow = I chose to allow permission
+     *
+     * _video.attachCamera(_camera);
+     *
+     *  Yes - Quick    - Deny   =   NO_PERMISSION
+     * 	Yes - Quick    - Allow  =   SUCCESS
+     *  No  - Quick    - Deny	=	NO_PERMISSION
+     *  No  - Quick    - Allow  =   SUCCESS
+     *
+     *
+     * Security.showSettings
+     *
+     * 	No  - Settings - Deny	=   NO_PERMISSION
+     * 	No  - Settings - Allow	=   SUCCESS
+     * 	Yes - Settings - Deny   =   NO_PERMISSION
+     * 	Yes - Settings - Allow  =   SUCCESS
+     *
+     *
+     *
+     *
+     *
+     *
+     *
 	 * I chose to implement Grant Skinners IDisposable because I think its good practice
 	 *
 	 */
 	public class CameraDetectionVerbose extends EventDispatcher implements IDisposable {
 		
-	//	private static const MAC_OS				:String 	= "Mac OS";
 		private static const CAMERA_MUTED		:String 	= "Camera.Muted";
 		private static const CAMERA_UNMUTED		:String 	= "Camera.Unmuted";
 		
 		
-		private var _camera						:Camera;
-		private var _currentCameraIndex			:uint		= 0;
-		private var _numCameras					:uint;
-		private var _defaultCameraName			:String;
-		private var _video						:Video;
+		private var _camera						:Camera;                            // the camera object we are testing
+		private var _currentCameraIndex			:uint		= 0;                    // the current index of the camera we are testing
+		private var _numCameras					:uint;                              // the number of cameras in the list
+		private var _defaultCameraName			:String;                            // the name of the default camera
+		private var _video						:Video;                             // the video object to use with the camera to test
 		
-		private var _timer						:Timer;
-		private var _defaultDelay				:uint		= 100;
-		private var _defaultRepeatCount			:uint		= 25;
-		private var _permissionsDelay			:uint		= 200;
-		private var _permissionsDenyCount		:uint		= 2;
-		private var _camFPSAverage				:Number;
-		private var _camActivityInit			:Boolean;
-		private var _camActivityAverage			:Number;
-		private var numTimesGoodCamera			:int		= 0;
-		private var minTimesGood				:int 		= 3;
-	//	private var _isMac						:Boolean	= false;
-		private var _stage						:Stage;
+		private var _timer						:Timer;                             // the main timer, user for both permissions and camera
+		private var _defaultDelay				:uint		= 100;                  // the default delay for testing the camera
+		private var _defaultRepeatCount			:uint		= 25;                   // the default repeatCount for testing the camera
+		private var _permissionsDelay			:uint		= 200;                  // the default delay for checking permissions
+		private var _permissionsDenyCount		:uint		= 2;                    // the default repeatCount for checking permissions
+		private var _camFPSAverage				:Number;                            // the average of the fps of the camera we are checking
+		private var _camActivityInit			:Boolean;                           // whether we have passed the camera's activity init phase
+		private var _camActivityAverage			:Number;                            // the average of the activity of the camera we are checking
+		private var _numTimesGoodCamera			:int		= 0;                    // number of times this camera has shown to work during a single check
+		private var _minTimesGood				:int 		= 3;                    // the min number of times a camera must respond as working
+        private var _rememberedPermissions      :Boolean    = false;                // true = the permissions dialog did not show once || false = permissions dialog did show
+
+		private var _stage						:Stage;                             // ref to the stage for permissions checking
 		
-        /**
+		/**
          * output is a function that accepts a string parameter.
          * It is designed to be able to see everything the class is doing.
-         * 
+         *
          * @default trace      It uses the trace function as a default.
          */
 		public var output:Function;
@@ -136,7 +197,7 @@ package ktu.media {
 		 * 		Developer uses attachCamera function to trigger the dialog asking for permission,							<br/>
 		 * 		The dialog simply never shows up.																			<br/>
 		 *																													<br/>
-		 * The Fix:																											<br/>
+		 *  The Fix:																										<br/>
 		 * 		* Thanks to Philippe Piernot for the code from https://bugs.adobe.com/jira/browse/FP-41						<br/>
 		 *																													<br/>
 		 * 		Attempt to draw the stage into a BitmapData using bitmap.draw();											<br/>
@@ -171,7 +232,22 @@ package ktu.media {
 			_defaultDelay = value;
 			if (_timer) _timer.delay = value;
 		}
-		
+        /**
+         * property telling wether the user had previously chosen 'remember my decision' in the settings dialog.
+         *
+         * This value is used for statistics only. It is interesting to find if users are actually using 'remember' and thus
+         *  we can determine how our users use the application.
+		 *
+		 * This property is only useful the FIRST time you run the code. If the user selects allow, then you dispose the camera
+		 * and detect the camera again, the class will think they selected remember. Where the real issue is that they have already given
+		 * this session permission.
+		 *
+		 * NOTE: since cameraDetection automatically calls dispose() when it's done, be wary of garbage collection... If accessed
+		 * 		 in the event that is dispatched you will be fine, but after it may not be around if you have no other references to the object.
+         */
+        public function get rememberedPermissions ():Boolean {
+            return _rememberedPermissions;
+        }
 		/**
 		 * begin searching for the first working Camera object. 														<br>
 		 * 																												<br>
@@ -186,12 +262,13 @@ package ktu.media {
 			if (_numCameras == 0 || !Capabilities.hasVideoEncoder)
 /* FAIL */		dispatch (CameraDetectionResult.NO_CAMERAS);
 
-	//		if (Capabilities.os.substr (0, 6) == MAC_OS)
-	//			_isMac = true;
-	//		output ("\t _isMac = " + _isMac);
 			getDefaultCamera ();
+			
+			if (!_camera)
+/* FAIL */		dispatch (CameraDetectionResult.NO_CAMERAS);		// just in case?
 			output ("\tCamera.muted = " + _camera.muted);
-			if (_camera.muted == false) {
+			if (!_camera.muted) {
+                _rememberedPermissions = true;  // if default camera is not muted, then remember was checked with allow, no dialog will show
 				havePermissions ();
 			} else {
 				askPermission ();
@@ -204,7 +281,7 @@ package ktu.media {
 		 * the process of searching for a Camera. 																							<br>
 		 * 																																	<br>
 		 * *Implemented for IDisposable*
-		 * */
+		 */
 		public function dispose ():void {
 			output ("CameraDetection::dispose()");
 			if (_video) {
@@ -222,36 +299,23 @@ package ktu.media {
 		
 		/** @private
 		 *
-		 * finds the default camera and then asks for permission to use the camera
-		 *
-		 * 		If we are on a Mac machine, grab the last camera in the list (because of their silly bug)
-		 * 		If we already have permission to use the camera, check the camera,
-		 * 		if not, get permission to use the camera
+		 * finds the default camera
+		 *  _defaultCameraName is used for checking... We always check that one first, so in next camera,
+         * we don't want to check it again, if it didn't work.
 		 *
 		 */
 		private function getDefaultCamera ():void {
-	//		if (_isMac) _camera = getMacDefaultCamera ();
-	/*		else */		_camera = Camera.getCamera ();
+            _camera = Camera.getCamera ();
 			_defaultCameraName = _camera.name;
 		}
-		/** @private
-		 *  gets the defualt camera for mac laptops
-		 *
-		 * 	This simply grabs the last camera in the list, as that is the normal location
-		 * 	of mac laptop built in cameras
-		 * @return
-		 */
-	//	private function getMacDefaultCamera():Camera{
-	//		_isMac = false;
-	//		var camera:Camera = Camera.getCamera (String (_numCameras - 1));
-	//		_numCameras--;
-	//		return camera;
-	//	}
 		/** @private
 		 *
 		 * begin checking a camera
 		 *
 		 * 	resets values, add eventlistener, attach camera to video, then start the timer
+         *
+         * we are checking a new camera, so the values must be reset. The Activity event must be listened for
+         * otherwise that value does not get updated.
 		 *
 		 */
 		private function checkCamera ():void {
@@ -260,19 +324,19 @@ package ktu.media {
 			_camActivityInit = true;
 			_camActivityAverage = -1;
 			_camFPSAverage = -1;
-			_camera.addEventListener (ActivityEvent.ACTIVITY, onCamActivity, false, 0, true);
+			_camera.addEventListener (ActivityEvent.ACTIVITY, onCamActivity);
 			_video.attachCamera (_camera);
 			_timer.reset ();
-			_timer.start (); // callback function is tickCheckCamera()
+			_timer.start (); // callback function is tick()
 			output ("activity:average\tfps:average");
 		}
-		
 		/** @private
 		 *
 		 * 	prepares next Camera for checking.
 		 *
 		 * 		Dispose of previous camera
 		 * 		if haven't checked all cameras, get the next camera and check it
+         *      if the camera we are checking is the default, skip it, cause it has already been checked
 		 * 		if all cameras have been checked, FAIL, no cameras work
 		 *
 		 */
@@ -283,12 +347,12 @@ package ktu.media {
 				_camera = Camera.getCamera ( String (_currentCameraIndex) );
 				_currentCameraIndex ++;
 				if (_camera.name == _defaultCameraName) {
-					nextCamera ();
+					nextCamera ();  // skip it because it always gets checked first, and shouldn't be checked twice
 				} else {
 					checkCamera ();
 				}
 			} else {
-/* FAIL */		dispatch (CameraDetectionResult.NO_CAMERAS);
+/* FAIL */		dispatch (CameraDetectionResult.NO_SUCCESS);
 			}
 		}
 		/** @private
@@ -316,18 +380,14 @@ package ktu.media {
 					
 					output ("act: " + _camera.activityLevel + ":" + _camActivityAverage + "\tfps: " + _camera.fps + ":" + _camFPSAverage);
 					if (_camFPSAverage > 0 && _camActivityAverage >= 0) {
-						numTimesGoodCamera ++;
-						if (numTimesGoodCamera > minTimesGood)
+						_numTimesGoodCamera ++;
+						if (_numTimesGoodCamera > _minTimesGood)
 /* SUCCESS */				dispatch (CameraDetectionResult.SUCCESS);
 					}
-				break;
+					break;
 				case TimerEvent.TIMER_COMPLETE:
-					if (_camFPSAverage > 0 && _camActivityAverage >= 0) {
-/* SUCCESS */				dispatch (CameraDetectionResult.SUCCESS);
-							return
-					}
 					nextCamera ();	// we have bad camera, Try the next one
-				break;
+					break;
 			}
 		}
 		/** @private
@@ -335,27 +395,9 @@ package ktu.media {
 		 *  Ask user for permission to use camera
 		 *
 		 */
-		private function askPermission ():void {
-			_camera.addEventListener (StatusEvent.STATUS, onCamStatus, false, 0, true);
-			/*
-			 * _video.attachCamera(_camera);
-			 * 		With introduction of drawStage, this succeeds every time I have tested
-			 *
-			 *  Yes - Quick    - Deny   =   Proper result of NO_PERMISSION
-			 * 	Yes - Quick    - Allow  =   Proper result of SUCCESS
-			 *  No  - Quick    - Deny	=	Proper result of NO_PERMISSION
-			 *  No  - Quick    - Allow  =   Proper result of SUCCESS
-			 *
-			 *
-			 * Security.showSettings
-			 * 		Works every time with drawStage, but lots of SecurityErrors in the output
-			 *
-			 * 	No  - Settings - Deny	=   Proper result of NO_PERMISSION
-			 * 	No  - Settings - Allow	=   Proper result of SUCCESS
-			 * 	Yes - Settings - Deny   =   Proper result of NO_PERMISSION
-			 * 	Yes - Settings - Allow  =   Proper result of SUCCESS
-			 */
+		private function askPermission():void {
 			output ("CameraDetection::askPermission()");
+			_camera.addEventListener (StatusEvent.STATUS, onCamStatus);
 			//attaching to video will open quick dialog. If remember has been set, it won't open
 				_video.attachCamera (_camera);
 			// Show settings opens the two step that will bypass the remember setting
@@ -369,7 +411,7 @@ package ktu.media {
 		 * We were given permissions, so start checking the first camera
 		 *
 		 */
-		private function havePermissions ():void {
+		private function havePermissions():void {
 			output ("CameraDetection::permissionGranted()");
 			constructTimer();
 			checkCamera ();
@@ -390,18 +432,15 @@ package ktu.media {
 			if (!_camera.muted) { // permision was granted
 				if (!_camActivityInit) {
 					_camActivityInit = false;	// only to get one more tick out of the timer
-					return;
-				}
-				havePermissions ();
-				return;
-			}
-			if (isPermissionBoxClosed ()) {
+				} else {
+                    havePermissions ();
+                }
+			} else if (isPermissionBoxClosed ()) {
 				if ( _timer.currentCount >= _permissionsDenyCount ) {
 					output ("CameraDetection::permissionDenied()");
 					dispatch (CameraDetectionResult.NO_PERMISSION);
 					return;
 				}
-				
 			}
 		}
 		/** @private
@@ -409,7 +448,7 @@ package ktu.media {
 		 * 	Checks if the permissions box is closed
 		 *
 		 * 	This is only used to check if the dialog never displays at all. This will not display under only one circumstance:
-		 * The user has checked remember and with deny in the settings.
+		 * The user has checked remember in the settings.
 		 *
 		 * This method attempts to draw the stage. If the dialog is open, it throws a security error.
 		 *
@@ -429,6 +468,7 @@ package ktu.media {
 			try {
 				dummy.draw(_stage);
 			} catch (error:SecurityError) {
+                _rememberedPermissions = false;     // the dialog showed up at least for a bit, so no remembmer
 				closed = false;
 			}
 			dummy.dispose ();
@@ -441,7 +481,8 @@ package ktu.media {
 		 * @param	e
 		 */
 		private function onCamStatus (e:StatusEvent):void {
-			disposeTimer();
+			disposeTimer ();
+            _rememberedPermissions = false;     // only interaction with the panel could cause this event, thus, they did not remember
 			switch (e.code) {
 				case CAMERA_UNMUTED:
 					havePermissions ();
@@ -479,8 +520,8 @@ package ktu.media {
 		private function constructTimer ():void {
 			if (_timer) disposeTimer();
 			_timer = new Timer (_defaultDelay, _defaultRepeatCount);
-			_timer.addEventListener (TimerEvent.TIMER,          tickCheckCamera, false, 0, true);
-			_timer.addEventListener (TimerEvent.TIMER_COMPLETE, tickCheckCamera, false, 0, true);
+			_timer.addEventListener (TimerEvent.TIMER,          tickCheckCamera);
+			_timer.addEventListener (TimerEvent.TIMER_COMPLETE, tickCheckCamera);
 			
 		}
 		/** @private
