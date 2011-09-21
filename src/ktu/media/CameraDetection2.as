@@ -12,20 +12,17 @@
  */
 package ktu.media {
 	
-	import flash.system.Security;
-	import flash.system.SecurityPanel;
-	import ktu.events.CameraDetectionEvent;
-	
-	import flash.display.BitmapData;
 	import flash.display.Stage;
 	import flash.events.ActivityEvent;
 	import flash.events.EventDispatcher;
-	import flash.events.StatusEvent;
 	import flash.events.TimerEvent;
 	import flash.media.Camera;
 	import flash.media.Video;
-	import flash.system.Capabilities;
 	import flash.utils.Timer;
+	import ktu.events.CameraDetectionEvent;
+	import ktu.events.MediaPermissionsEvent;
+	import ktu.media.MediaPermissions;
+	
 	
 	
 	
@@ -44,7 +41,7 @@ package ktu.media {
 	 * 		}
 	 *  }																													</listing>
 	 */
-	[Event(name="cameraResolved", type="com.crp.events.CameraDetectionEvent")]
+	[Event(name="cameraResolved", type="ktu.media.CameraDetectionEvent")]
 
 	
 	/**
@@ -96,72 +93,8 @@ package ktu.media {
 	 *
      *
      *
-     *	PERMISSIONS TESTING:
-     *
-     *  These are the results of my testing for permissions:
-     *
-     *  I conducted a thorough study of which methods produce which results when looking for permission from the user
-     * After all of my tweaks and changes, I was able to get proper results for all scenarios using both methods.
-     *
-     * There are two methods. One, using video.attachCamera() to pop up the 'quick' permission dialog,
-     * and the Security.showSettings() method which will ignore any choice of remember, and cause a two click process (on average)
-     *
-     * Below are the results from my testing. Here is the procedure of each test:
-     *
-     * Open
-     * cameraDetection.begin()
-     * permission box shows up
-     * I make a choice
-     *      depending on the criteria for the test, I choose remember or not
-     * Wait for CameraDetectionResult
-     * dispose of camera
-     * cameraDetection.begin()
-     * Wait for CameraDetectionResult
-     *
-     * The idea, is that if you use the quick settings, and you selected to remember my decision, the dialog will not show up at all
-     * So, if you 'remember' allow, it should be ok. If you 'remember' deny, then CameraDetection should dispatch with NO_PERMISSION and so on...
-     *
-     *
-     *  LEGEND:
-     *      Yes 	= Remember my decision
-     *      No 		= do not remember my decision
-     *      ACCESS 	= the short permissions dialog
-     *      PRIVACY = the full settings dialog (which requires at least two clicks)
-     *      Deny 	= I chose to deny permission
-     *      Allow 	= I chose to allow permission
-     *
-     * _video.attachCamera(_camera);
-     *
-     *  Yes - ACCESS    - Deny   =   NO_PERMISSION
-     * 	Yes - ACCESS    - Allow  =   SUCCESS
-     *  No  - ACCESS    - Deny	 =	 NO_PERMISSION
-     *  No  - ACCESS	- Allow  =   SUCCESS
-     *
-     *
-     * Security.showSettings
-     *
-     * 	No  - PRIVACY	- Deny	 =   NO_PERMISSION
-     * 	No  - PRIVACY 	- Allow	 =   SUCCESS
-     * 	Yes - PRIVACY 	- Deny   =   NO_PERMISSION
-     * 	Yes - PRIVACY 	- Allow  =   SUCCESS
-     *
-     *
-     *
-     *
-     *
-     *
-     *
-	 * I chose to implement Grant Skinners IDisposable because I think its good practice
-	 *
 	 */
-	public class CameraDetection extends EventDispatcher {
-		
-		public static const ACCESS				:String		= "accessDialog"		// a permissions mode that will use Video.attachCamera();
-		public static const PRIVACY				:String		= "privacyDialog"		// a permissions mode that will use Security.showSettings(SecurityPanel.PRIVACY);
-		
-		private static const CAMERA_MUTED		:String 	= "Camera.Muted";
-		private static const CAMERA_UNMUTED		:String 	= "Camera.Unmuted";
-		
+	public class CameraDetection2 extends EventDispatcher {
 		
 		private var _camera						:Camera;                            // the camera object we are testing
 		private var _currentCameraIndex			:uint		= 0;                    // the current index of the camera we are testing
@@ -172,17 +105,15 @@ package ktu.media {
 		private var _timer						:Timer;                             // the main timer, user for both permissions and camera
 		private var _defaultDelay				:uint		= 100;                  // the default delay for testing the camera
 		private var _defaultRepeatCount			:uint		= 25;                   // the default repeatCount for testing the camera
-		private var _permissionsDelay			:uint		= 200;                  // the default delay for checking permissions
-		private var _permissionsDenyCount		:uint		= 2;                    // the default repeatCount for checking permissions
 		private var _camFPSAverage				:Number;                            // the average of the fps of the camera we are checking
 		private var _camActivityInit			:Boolean;			                // whether we have passed the camera's activity init phase
 		private var _camActivityAverage			:Number; 			                // the average of the activity of the camera we are checking
 		private var _numTimesGoodCamera			:int		= 0;                    // number of times this camera has shown to work during a single check
 		private var _minTimesGood				:int 		= 3;                    // the min number of times a camera must respond as working
         private var _rememberedPermissions      :Boolean    = false;                // true = the permissions dialog did not show once || false = permissions dialog did show
-		private var _permissionsMode			:String 	= ACCESS;				// the mode that CameraDetection will ask for permissions
 		
 		private var _stage						:Stage;                             // ref to the stage for permissions checking
+		private var _mediaPermissions			:MediaPermissions;
 		
 		
 		
@@ -204,8 +135,9 @@ package ktu.media {
 		 * 			Thus informing us that the user had selected remember with deny.										<br/>
 		 *
 		 */
-		public function CameraDetection (stage:Stage):void {
+		public function CameraDetection2 (stage:Stage):void {
 			_stage = stage;
+			_mediaPermissions:MediaPermissions = new MediaPermissions(_stage);
 		}
 		
 		/**
@@ -249,7 +181,7 @@ package ktu.media {
 		/**
 		 * setting for which way CameraDetection will ask for permission
 		 *
-		 * ACCESS = Video.attachCamera(); this will trigger a quick "Camera and Microphone Access" dialog.
+		 * QUICK = Video.attachCamera(); this will trigger a quick "Camera and Microphone Access" dialog.
 		 * 			It only contains an "Allow" and "Deny" radio button.
 		 * 			If the user had selected "Remember" in the Privacy dialog to "deny" then this dialog will not show up.
 		 * 			If this happens, then no events get triggered, thus requiring the Bitmap.draw(stage) hack to find out if it ever does show up.
@@ -258,9 +190,13 @@ package ktu.media {
 		 * 			 "Privacy" tab. In here there is an "Allow" and "Deny" radio buttons and also a "Remember" checkbox.
 		 * 			 Using this, there is no worry that a dialog won't show and it won't trigger events.
 		 */
-		public function get permissionsMode ():String { return _permissionsMode	}
+		public function get permissionsMode ():String { return _mediaPermissions.model;	}
 		public function set permissionsMode (value:String):void {
-			if (value == ACCESS || value == PRIVACY) _permissionsMode = value
+			if (value == MediaPermissions.QUICK_ACCESS || value == MediaPermissions.PRIVACY_DIALOG) _mediaPermissions.mode = value;
+		}
+		
+		public function get mediaPermissions():MediaPermissions {
+			return _mediaPermissions;
 		}
 		/**
 		 * begin searching for the first working Camera object. 														<br>
@@ -272,16 +208,19 @@ package ktu.media {
 			_video = new Video ();
 			_numCameras = Camera.names.length;
 			
-			if (_numCameras == 0 || !Capabilities.hasVideoEncoder)
+			
+			if (mediaPermissions.checkCameraAvailability())
 /* FAIL */		dispatch (CameraDetectionResult.NO_CAMERAS);
 
-			getDefaultCamera ();
+			_camera = Camera.getCamera ();
+			_defaultCameraName = _camera.name;
 			
-			if (!_camera.muted) {
+			if (mediaPermissions.havePermission()) {
                 _rememberedPermissions = true;  // if default camera is not muted, then remember was checked with allow, no dialog will show NOTE, this is only true the FIRST time this code is run in an swf.
 				havePermissions ();
 			} else {
-				askPermission ();
+				_mediaPermissions.addEventListener(MediaPermissionsEvent.RESOLVE, onMediaPermissionsResolve);
+				_mediaPermissions.getPermission(Camera);
 			}
 		}
 		/**
@@ -302,24 +241,17 @@ package ktu.media {
 		}
 		
 		
-		
-		
-		
-		
 		/** @private
 		 *
-		 * finds the default camera
-		 *  _defaultCameraName is used for checking... We always check that one first, so in next camera,
-         * we don't want to check it again, if it didn't work.
+		 * We were given permissions, so start checking the first camera
 		 *
 		 */
-		private function getDefaultCamera ():void {
-            _camera = Camera.getCamera ();
-			_defaultCameraName = _camera.name;
-			
-			if (!_camera)
-/* FAIL */		dispatch (CameraDetectionResult.NO_CAMERAS);		// if at least one camera, it should return something. If it doesn't, than its because its already in use
+		private function havePermissions():void{
+			constructTimer();
+			checkCamera ();
 		}
+		
+		
 		/** @private
 		 *
 		 * begin checking a camera
@@ -399,41 +331,8 @@ package ktu.media {
 					break;
 			}
 		}
-		/** @private
-		 *
-		 *  Ask user for permission to use camera
-		 *
-		 */
-		private function askPermission():void {
-			// listen for the Camera.muted setting to change
-			_camera.addEventListener (StatusEvent.STATUS, onCamStatus);
-			
-			// setup timer for Bitmap.draw hack
-			_timer = new Timer(_permissionsDelay);
-			_timer.addEventListener(TimerEvent.TIMER, tickPermissionsCheck);
-			_timer.start();
-			
-			// bring up a dialog asking for permission
-			switch (_permissionsMode) {
-				case ACCESS:
-					//attaching to video will open quick dialog. If remember has been set, it won't open
-					_video.attachCamera (_camera);
-					break;
-				case PRIVACY:
-					// Show settings opens the two step that will bypass the remember setting
-					Security.showSettings(SecurityPanel.PRIVACY);
-					break;
-			}
-		}
-		/** @private
-		 *
-		 * We were given permissions, so start checking the first camera
-		 *
-		 */
-		private function havePermissions():void{
-			constructTimer();
-			checkCamera ();
-		}
+		
+		
 		/** @private
 		 *
 		 * when requesting permission to use the camera, sometimes the settings dialog does not dispatch its events.
@@ -446,71 +345,12 @@ package ktu.media {
 		 *
 		 * @param	e
 		 */
-		private function tickPermissionsCheck (e:TimerEvent):void {
-			if (!_camera.muted) { // permision was granted
-				trace("timer says .muted changed");
-				if (!_camActivityInit) {
-					_camActivityInit = false;	// only to get one more tick out of the timer. ya ya I know. ƒ
-				} else {
-                    havePermissions ();
-                }
-			} else if (isPermissionBoxClosed ()) {
-				if ( _timer.currentCount >= _permissionsDenyCount ) {
-					trace("timer says denied too long");
-					dispatch (CameraDetectionResult.NO_PERMISSION);
-					return;
-				}
-			}
-		}
-		/** @private
-		 *
-		 * 	Checks if the permissions box is closed
-		 *
-		 * 	This is only used to check if the dialog never displays at all. This will not display under only one circumstance:
-		 * The user has checked remember in the settings.
-		 *
-		 * This method attempts to draw the stage. If the dialog is open, it throws a security error.
-		 *
-		 * Thanks to Philippe Piernot for the code
-		 * https://bugs.adobe.com/jira/browse/FP-41
-		 *
-		 * aslo, a neighboring comment:
-		 * Author:  Kaspar Lüthi:
-		 * Comment: Philippe, your workaround is quite cool. Unfortunately it does not work when
-		 * 			you have a video displayed, where you have no bitmap access to.
-		 * @return
-		 */
-		private function isPermissionBoxClosed():Boolean{
-			var closed:Boolean = true;
-			var dummy:BitmapData;
-			dummy = new BitmapData (1, 1);
-			try {
-				dummy.draw(_stage);
-			} catch (error:SecurityError) {
-                _rememberedPermissions = false;     // the dialog showed up at least for a bit, so no remembmer
-				closed = false;
-			}
-			dummy.dispose ();
-			dummy = null;
-			return closed;
-		}
-		/** @private
-		 *
-		 * 	captures event dispatched from the Settings panel for permission to access the Camera
-		 *
-		 * @param	e
-		 */
-		private function onCamStatus (e:StatusEvent):void {
-			trace("cam status got fired");
-			disposeTimer ();
-            _rememberedPermissions = false;     // only interaction with the panel could cause this event, thus, they did not remember
-			switch (e.code) {
-				case CAMERA_UNMUTED:
-					havePermissions ();
-				break;
-				case CAMERA_MUTED:
-/* FAIL */			dispatch (CameraDetectionResult.NO_PERMISSION);
-				break;
+		private function onMediaPermissionsResolve(e:MediaPermissionsEvent):void {
+			_rememberedPermissions = e.remembered;
+			if (e.code == MediaPermissionsResult.GRANTED) {
+				havePermissions();
+			} else {
+				dispatch (CameraDetectionResult.NO_PERMISSION);
 			}
 		}
 		
@@ -561,7 +401,6 @@ package ktu.media {
 		 */
 		private function disposeCamera ():void {
 			_camera.removeEventListener (ActivityEvent.ACTIVITY, onCamActivity);
-			_camera.removeEventListener (StatusEvent.STATUS, onCamStatus);
 			_camera = null;
 		}
 	}

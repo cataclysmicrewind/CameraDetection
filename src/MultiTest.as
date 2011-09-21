@@ -106,10 +106,11 @@ package  {
 			_cd.dispose ();
 		}
 		
-		private function run():void{
+		private function run():void {
+			createVideo(Camera.getCamera());
 			_cd = new CameraDetection (stage);
 			_cd.addEventListener (CameraDetectionEvent.RESOLVE, onResolve);
-			_cd.begin ();1
+			//_cd.begin ();
 		}
 		
 		private function onResolve(e:CameraDetectionEvent):void {

@@ -1,7 +1,7 @@
 ﻿/**
- * * File:	CameraDetectionEvent.as;
+ * * File:	MediaPermissionsEvent.as;
  * Author:	Ktu; 							[blog.cataclysmicrewind.com]
- * Updated:	12.17.10;
+ * Updated:	2011.9.21
  * Thanks: Pavel fljot
  *
  * This class is free to use and modify, however I request that the header (except example code),
@@ -13,7 +13,6 @@
 package ktu.events {
 	
 	import flash.events.Event;
-	import flash.media.Camera;
 	
 	/**
 	 *
@@ -21,19 +20,12 @@ package ktu.events {
 	 *
 	 *
 	 */
-	public class CameraDetectionEvent extends Event {
+	public class MediaPermissionsEvent extends Event {
 
 		/**
 		 * event value for when CameraDetection has completed its process
 		 */
-		public static const RESOLVE			:String = "cameraResolved";
-		
-		
-		private var _camera:Camera;
-		/**
-		 * returns the camera associated with the event
-		 */
-		public function get camera():Camera { return _camera; }
+		public static const RESOLVE			:String = "mediaPermissionsResolved";
 		
         
 		private var _code:String;
@@ -59,8 +51,7 @@ package ktu.events {
 		 * @param	bubbles
 		 * @param	cancelable
 		 */
-		public function CameraDetectionEvent (type:String, camera:Camera = null, code:String = null, remembered:Boolean = false,  bubbles:Boolean = false, cancelable:Boolean = false ):void {
-			_camera = camera;
+		public function MediaPermissionsEvent (type:String, code:String = null, remembered:Boolean = false,  bubbles:Boolean = false, cancelable:Boolean = false ):void {
 			_code = code;
 			_remembered = remembered;
 			super (type, bubbles, cancelable);
