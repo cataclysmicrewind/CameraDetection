@@ -19,10 +19,9 @@ package  {
 		
 		private function onClick(e:MouseEvent):void {
 			var p:MediaPermissions = new MediaPermissions(stage);
-			p.getPermission(Microphone);
+			p.mode = MediaPermissions.PRIVACY_DIALOG;
 			p.addEventListener (MediaPermissionsEvent.RESOLVE, onPermissionsResolve);
-			var c:CameraDetection2 = new CameraDetection2(stage);
-			c.addEventListener(
+			p.getPermission(Microphone);
 		}
 		
 		private function onPermissionsResolve(e:MediaPermissionsEvent):void {

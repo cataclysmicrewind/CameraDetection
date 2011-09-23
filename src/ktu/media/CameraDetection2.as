@@ -137,7 +137,7 @@ package ktu.media {
 		 */
 		public function CameraDetection2 (stage:Stage):void {
 			_stage = stage;
-			_mediaPermissions:MediaPermissions = new MediaPermissions(_stage);
+			_mediaPermissions = new MediaPermissions(_stage);
 		}
 		
 		/**
@@ -190,7 +190,7 @@ package ktu.media {
 		 * 			 "Privacy" tab. In here there is an "Allow" and "Deny" radio buttons and also a "Remember" checkbox.
 		 * 			 Using this, there is no worry that a dialog won't show and it won't trigger events.
 		 */
-		public function get permissionsMode ():String { return _mediaPermissions.model;	}
+		public function get permissionsMode ():String { return _mediaPermissions.mode;	}
 		public function set permissionsMode (value:String):void {
 			if (value == MediaPermissions.QUICK_ACCESS || value == MediaPermissions.PRIVACY_DIALOG) _mediaPermissions.mode = value;
 		}
@@ -390,7 +390,6 @@ package ktu.media {
 		 */
 		private function disposeTimer():void {
 			if (_timer.running) _timer.stop();
-			_timer.removeEventListener (TimerEvent.TIMER, tickPermissionsCheck);
 			_timer.removeEventListener (TimerEvent.TIMER,          tickCheckCamera);
 			_timer.removeEventListener (TimerEvent.TIMER_COMPLETE, tickCheckCamera);
 			_timer = null;
