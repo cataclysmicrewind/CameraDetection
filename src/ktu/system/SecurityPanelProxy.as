@@ -52,16 +52,20 @@ package ktu.system {
 		private var _timer						:Timer;
 		public var 	permissionsTimerDelay		:uint		= 200;                  // the default delay for checking permissions
 		
+		private var _useEchoSurpression:Boolean;
+		private var _gain:uint;
+		private var _mediaDevicePermission:Boolean;
+		
 		
 		public function SecurityPanelProxy(stage:Stage) {
 			_stageRef = stage;
-			stage.addEventListener(Event.ADDED, captureNewChildOfStage);
+			
 		}
 		/**
 		 * tells you what the Microphone.useEchoSurpression value is
 		 */
 		public function get useEchoSurpression ():Boolean {
-			return true
+			return;
 		}
 		/**
 		 * tells you what the Microphone.gain value is
@@ -108,7 +112,7 @@ package ktu.system {
 				_netStream.attachAudio(_microphone);
 			} else 
 				Security.showSettings(page);
-				dispatch("open");
+			dispatch("open");
 		}
 		
 		/**
@@ -152,22 +156,6 @@ package ktu.system {
 		}
 		
 		
-		/**
-		 * this function will run whenever the stage gets a new child. 
-		 * It will try to grab that child, if it is null, then I am going to assume that the dialog is open...
-		 * Since it opens, I will keep track of when it closes. Also, I will set the initial values of all its configurable options
-		 * and notify if there is any change.
-		 * 
-		 * @param	e
-		 */
-		private function captureNewChildOfStage(e:Event):void {
-			
-		}
 		
-		/**
-		 * 
-		 * CODE TO KEEP TRACK OF WHEN THE DIALOG IS OPEN
-		 * 
-		 */
 	}
 }
