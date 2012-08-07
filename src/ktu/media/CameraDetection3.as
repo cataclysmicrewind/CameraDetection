@@ -94,27 +94,17 @@ package ktu.media {
      *
      *
 	 */
-	public class CameraDetection2 extends EventDispatcher {
+	public class CameraDetection3 extends EventDispatcher {
 		
-		private var _camera						:Camera;                            // the camera object we are testing
 		private var _currentCameraIndex			:uint		= 0;                    // the current index of the camera we are testing
 		private var _numCameras					:uint;                              // the number of cameras in the list
 		private var _defaultCameraName			:String;                            // the name of the default camera
-		private var _video						:Video;                             // the video object to use with the camera to test
 		
-		private var _timer						:Timer;                             // the main timer, user for both permissions and camera
-		private var _defaultDelay				:uint		= 100;                  // the default delay for testing the camera
-		private var _defaultRepeatCount			:uint		= 25;                   // the default repeatCount for testing the camera
-		private var _camFPSAverage				:Number;                            // the average of the fps of the camera we are checking
-		private var _camActivityInit			:Boolean;			                // whether we have passed the camera's activity init phase
-		private var _camActivityAverage			:Number; 			                // the average of the activity of the camera we are checking
-		private var _numTimesGoodCamera			:int		= 0;                    // number of times this camera has shown to work during a single check
-		private var _minTimesGood				:int 		= 3;                    // the min number of times a camera must respond as working
         private var _rememberedPermissions      :Boolean    = false;                // true = the permissions dialog did not show once || false = permissions dialog did show
 		
 		private var _stage						:Stage;                             // ref to the stage for permissions checking
 		private var _mediaPermissions			:MediaPermissions;
-        private var cCheck                      :CameraChecker;
+        private var _cCheck                     :CameraChecker;
 		
         
 		/**
@@ -123,22 +113,22 @@ package ktu.media {
 		 * This value along with the detectionDelay property will determine how long this object will spend
 		 * checking each Camera object.
 		 */
-		public function get detectionRepeatCount():uint { return _defaultRepeatCount; }
-		public function set detectionRepeatCount(value:uint):void {
-			_defaultRepeatCount = value;
-			if (_timer) _timer.repeatCount = value;
-		}
+		public function get detectionRepeatCount():uint { return _cCheck.timerRepeatCount; }
+		public function set detectionRepeatCount(value:uint):void { _cCheck.timerRepeatCount = value; }
 		/**
 		 * delay property of the timer used while checking a Camera object												<br>
 		 *
 		 * This value along with the detectionRepeatCount property will determine how long this object will spend
 		 * checking each Camera object.
 		 */
-		public function get detectionDelay():uint { return _defaultDelay; }
-		public function set detectionDelay (value:uint):void {
-			_defaultDelay = value;
-			if (_timer) _timer.delay = value;
-		}
+		public function get detectionDelay():uint { return _cCheck.timerDelay; }
+		public function set detectionDelay (value:uint):void { _cCheck.timerDelay = value; }
+        /**
+         * delay for the timer while checking permissions. this is likley to not need changing, but it ist still
+         * an option.
+         */
+        public function get permissionsDelay():uint { return _mediaPermissions.timerDelay; }
+        public function set permissionsDelay(value):uint { _mediaPermissions.timerDelay = value; }
         /**
          * property telling wether the user had previously chosen 'remember my decision' in the settings dialog.
          *
@@ -170,9 +160,6 @@ package ktu.media {
 			if (value == MediaPermissions.QUICK_ACCESS || value == MediaPermissions.PRIVACY_DIALOG) _mediaPermissions.mode = value;
 		}
 		
-		public function get mediaPermissions():MediaPermissions {
-			return _mediaPermissions;
-		}
         
         
         /**
@@ -185,16 +172,18 @@ package ktu.media {
 		 * 		The dialog simply never shows up.																			<br/>
 		 *																													<br/>
 		 *  The Fix:																										<br/>
-		 * 		* Thanks to Philippe Piernot for the code from https://bugs.adobe.com/jira/browse/FP-41						<br/>
+		 * 		* Thanks to Martin Arvisais for the code from https://bugs.adobe.com/jira/browse/FP-41						<br/>
 		 *																													<br/>
-		 * 		Attempt to draw the stage into a BitmapData using bitmap.draw();											<br/>
-		 * 		If the dialog is open, a SecurityError will be thrown.														<br/>
-		 * 			There by we can tell if the dialog never shows up														<br/>
-		 * 			Thus informing us that the user had selected remember with deny.										<br/>
+		 * 		checks the number of children on the stage. if there is more children than before asking for permission		
+         *      then the dialog is still up                                                                                 <br/> 
 		 *
 		 */
-		public function CameraDetection2 (stage:Stage):void {
+		public function CameraDetection3 (stage:Stage):void {
 			_stage = stage;
+            _mediaPermissions = new MediaPermissions(_stage);
+            _mediaPermissions.addEventListener(MediaPermissionsEvent.RESOLVE, onMediaPermissionsResolve);
+            _cCheck = new CameraChecker();
+            _cCheck.addEventListener(CameraDetectionEvent.RESOLVE, onCChecker);
 		}
         
         
@@ -205,25 +194,12 @@ package ktu.media {
 		 * object first because normally, the webcam Camera object on Mac laptops is at the bottom of the list.
 		 */
 		public function begin ():void {
-			_video = new Video ();
 			_numCameras = Camera.names.length;
-            
-			_mediaPermissions = new MediaPermissions(_stage);
 			if (!mediaPermissions.isCameraAvailable()) {
 /* FAIL */		dispatch (CameraDetectionResult.NO_CAMERAS);
                 return;
             }
-
-			_camera = Camera.getCamera ();
-			_defaultCameraName = _camera.name;
-			
-			if (mediaPermissions.havePermission()) {
-                _rememberedPermissions = true;  // if default camera is not muted, then remember was checked with allow, no dialog will show NOTE, this is only true the FIRST time this code is run in an swf.
-				havePermissions ();
-			} else {
-				_mediaPermissions.addEventListener(MediaPermissionsEvent.RESOLVE, onMediaPermissionsResolve);
-				_mediaPermissions.getPermission(Camera);
-			}
+            _mediaPermissions.getPermission(Camera);
 		}
 		/**
 		 * disposes of all objects holding memory in this class																				<br>
@@ -231,50 +207,10 @@ package ktu.media {
 		 * This method will prepare all objects in this class for garbage collection. This method can be called at any time during
 		 * the process of searching for a Camera. 																							<br>
 		 * 																																	<br>
-		 * *Implemented for IDisposable*
 		 */
 		public function dispose ():void {
-			if (_video) {
-				_video.attachCamera (null);
-				_video = null;
-			}
-			if (_camera) disposeCamera();
-			if (_timer) disposeTimer();
-		}
-		
-		
-		/** @private
-		 *
-		 * We were given permissions, so start checking the first camera
-		 *
-		 */
-		private function havePermissions():void {
-            cCheck = new CameraChecker();
-            cCheck.check(_camera);
-			constructTimer();
-			checkCamera ();
-		}
-		
-		
-		/** @private
-		 *
-		 * begin checking a camera
-		 *
-		 * 	resets values, add eventlistener, attach camera to video, then start the timer
-         *
-         * we are checking a new camera, so the values must be reset. The Activity event must be listened for
-         * otherwise that value does not get updated.
-		 *
-		 */
-		private function checkCamera ():void {
-			_camActivityInit = true;
-			_camActivityAverage = -1;
-			_camFPSAverage = -1;
-			_numTimesGoodCamera = 0;
-			_camera.addEventListener (ActivityEvent.ACTIVITY, onCamActivity);
-			_video.attachCamera (_camera);
-			_timer.reset ();
-			_timer.start (); // callback function is tick()
+            _mediaPermissions.dispose();
+            _cCheck.dispose();
 		}
 		/** @private
 		 *
@@ -286,52 +222,15 @@ package ktu.media {
 		 * 		if all cameras have been checked, FAIL, no cameras work
 		 *
 		 */
-		private function nextCamera ():void {
-			_video.attachCamera (null);
-			disposeCamera();
+		protected function nextCamera ():void {
 			if (_currentCameraIndex < _numCameras) {
-				_camera = Camera.getCamera ( String (_currentCameraIndex) );
+				var camera = Camera.getCamera ( String (_currentCameraIndex) );
 				_currentCameraIndex ++;
-				if (_camera.name == _defaultCameraName) nextCamera ();  // skip it because it always gets checked first
-				else checkCamera ();
+				if (camera.name == _defaultCameraName) nextCamera ();  // skip it because it always gets checked first
+				else _cCheck.check(camera);
 			} else
 /* FAIL */		dispatch (CameraDetectionResult.NO_SUCCESS);
 		}
-		/** @private
-		 *
-		 * capture function for the timer that checks each Camera.
-		 *
-		 * TimerEvent.TIMER
-		 * 		calculates an average of the fps coming from the camera.
-		 * 		Checks if we are past the initial camera acitivity phase (when a Camera is first connected to the activity property reads 100 for a period of time)
-		 * 		If we are past the camera activity init phase, calculate the average of the activity (this is less crutial)
-		 *
-		 * TimerEvent.COMPLETE
-		 * 		If fps average and activity average are greater than 0, we found a good camera
-		 * 		otherwise, it is not a good camera, check the next one
-		 *
-		 * @param	e
-		 */
-		private function tickCheckCamera (e:TimerEvent):void {
-			switch (e.type) {
-				case TimerEvent.TIMER:
-					_camFPSAverage = (_camFPSAverage < 0) ? _camera.currentFPS : ((_camFPSAverage * _timer.currentCount) + _camera.currentFPS) / _timer.currentCount;
-					
-					if (_camActivityInit && _camera.activityLevel < 100 ) _camActivityInit = false;
-					else _camActivityAverage = (_camActivityAverage < 0) ? _camera.activityLevel : (_camActivityAverage + _camera.activityLevel) / 2;
-					trace("act: " + _camera.activityLevel + ":" + _camActivityAverage + "\tfps: " + _camera.fps + ":" + _camFPSAverage);
-					if (_camFPSAverage > 0 && _camActivityAverage >= 0) {
-						_numTimesGoodCamera ++;
-						if (_numTimesGoodCamera > _minTimesGood)
-/* SUCCESS */				dispatch (CameraDetectionResult.SUCCESS);
-					}
-					break;
-				case TimerEvent.TIMER_COMPLETE:
-					nextCamera ();	// we have bad camera, Try the next one
-					break;
-			}
-		}
-		
 		
 		/** @private
 		 *
@@ -350,19 +249,34 @@ package ktu.media {
 			_rememberedPermissions = e.remembered;
 			if (e.code == MediaPermissionsResult.GRANTED)
 				havePermissions();
-			else
+			else if (e.code == MediaPermissionsResult.DENIED {
 /*FAIL*/		dispatch (CameraDetectionResult.NO_PERMISSION);
+            } else if (e.code == MediaPermissionsResult.NO_DEVICE) {
+                dispatch (CameraDetectionResult.NO_CAMERAS);
+            }
 		}
-		
-		/** @private
+        /** @private
 		 *
-		 * 	The Camera object will not update its activity property unless an event has been added to listen for activity changes
+		 * We were given permissions, so start checking the first camera
 		 *
-		 * @param	e
 		 */
-		private function onCamActivity(e:ActivityEvent):void {
-			//
+		private function havePermissions():void {
+            var camera = Camera.getCamera ();
+			_defaultCameraName = camera.name;
+            _cCheck.check(camera);
 		}
+        /**
+         * event handler for checking a camera
+         * @param	e
+         */
+		private function onCChecker(e:CameraDetectionEvent):void {
+            if (e.code == CameraDetectionResult.SUCCESS) {
+                dispatch(e.code);
+            } else {
+                nextCamera();
+            }
+        }
+		
 		/** @private
 		 *
 		 * 	This function will dispatch the proper event, then dispose of itself
@@ -372,35 +286,6 @@ package ktu.media {
 			if (result != CameraDetectionResult.SUCCESS) _camera = null;
 			dispatchEvent (new CameraDetectionEvent (CameraDetectionEvent.RESOLVE, _camera, result));
 			dispose ();
-		}
-		/** @private
-		 *
-		 * 	prepare Timer object for checking Camera objects
-		 */
-		private function constructTimer ():void {
-			if (_timer) disposeTimer();
-			_timer = new Timer (_defaultDelay, _defaultRepeatCount);
-			_timer.addEventListener (TimerEvent.TIMER,          tickCheckCamera);
-			_timer.addEventListener (TimerEvent.TIMER_COMPLETE, tickCheckCamera);
-			
-		}
-		/** @private
-		 *
-		 * 	prepare Timer object for garbage collection
-		 */
-		private function disposeTimer():void {
-			if (_timer.running) _timer.stop();
-			_timer.removeEventListener (TimerEvent.TIMER,          tickCheckCamera);
-			_timer.removeEventListener (TimerEvent.TIMER_COMPLETE, tickCheckCamera);
-			_timer = null;
-		}
-		/** @private
-		 *
-		 * 	prepare Camera object for garbage collection
-		 */
-		private function disposeCamera ():void {
-			_camera.removeEventListener (ActivityEvent.ACTIVITY, onCamActivity);
-			_camera = null;
 		}
 	}
 }

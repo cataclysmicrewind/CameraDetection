@@ -91,7 +91,7 @@ package ktu.media {
 		static public const PRIVACY_DIALOG				:String = "privacyDialog";			// full privacy settings dialog mode of requestion permission
 		
 		public var 	mode								:String = QUICK_ACCESS;				// permissions request mode
-		public var 	permissionsTimerDelay				:uint		= 200;                  // the default delay for checking permissions
+		public var 	timerDelay		            		:uint		= 200;                  // the default delay for checking permissions
 		
 		private var _stage								:Stage;								// needed to hack the dialog
 		private var _numChildren						:int;								// need this to keep track of when the dialog closes
@@ -114,19 +114,6 @@ package ktu.media {
 			_stage = stageRef;
 		}
 		
-		
-		
-		/**
-		 * returns whether you have permission to use any media devices or not
-		 */
-		public function havePermission():Boolean {
-			if (checkMicrophoneAvailability()) 
-				return !Microphone.getMicrophone().muted;
-			else if (checkCameraAvailability())
-				return !Camera.getCamera().muted;
-			else
-				return false;
-		}
 		/**
 		 * 	give a reference to the Micropone or Camera class, it will get permissions for that media device.
 		 * The dialogs and the way this class functions does not change depending on the device you are looking for
@@ -137,23 +124,27 @@ package ktu.media {
 		 * 
 		 * 
 		 */
-		public function getPermission(mediaType:Class = null):void {
+		public function getPermission(mediaType:Class = null, mode:String = ""):void {
 			trace("MediaPermissions::getPermission() - type: " + mediaType);
 			if (!checkMediaAvailability(mediaType)) {
 				dispatch(MediaPermissionsResult.NO_DEVICE); // stop, I can't do shit, it don't matter about permissions
 				return;
 			}
+            if (havePermission()) {
+                _remembered = true;
+                dispatch(MediaPermissionsResult.GRANTED);
+            }
 			
 			// store the current number of children on the stage. the dialog makes it one more...
 			_numChildren = _stage.numChildren;
 			// setup the timer 
-			_timer = new Timer(permissionsTimerDelay);
+			_timer = new Timer(timerDelay);
 			_timer.addEventListener(TimerEvent.TIMER, tickNumChildren);
 			_timer.start();
 			
-			_microphone = Microphone.getMicrophone();
 			
 			// start this thing
+            if (mode == "") mode = this.mode;
 			switch (mode) {
 				case QUICK_ACCESS:
 					quickAccessPermissions();
@@ -164,29 +155,41 @@ package ktu.media {
 			}
 		}
 		
-		public function checkMediaAvailability(mediaType:Class):Boolean {
+        /**
+		 * returns whether you have permission to use any media devices or not
+		 */
+		public function havePermission():Boolean {
+			if (isMicrophoneAvailable()) 
+				return !Microphone.getMicrophone().muted;
+			else if (isCameraAvailable())
+				return !Camera.getCamera().muted;
+			else
+				return false;
+		}
+        
+		public function checkMediaAvailability(mediaType:Class = null):Boolean {
 			switch(mediaType) {
 				case Microphone:
-					return checkMicrophoneAvailability();
+					return isMicrophoneAvailable();
 				case Camera:
-					return checkCameraAvailability();
+					return isCameraAvailable();
 				default:
-					var cam:Boolean = checkCameraAvailability();
-					var mic:Boolean = checkMicrophoneAvailability();
+					var cam:Boolean = isCameraAvailable();
+					var mic:Boolean = isMicrophoneAvailable();
 					if (cam && mic) return true;
 					else return false;
 			}
 		}
 		
-		public function checkCameraAvailability():Boolean {
-			trace("MediaPermissions::checkCameraAvailability()");
+		public function isCameraAvailable():Boolean {
+			trace("MediaPermissions::isCameraAvailable()");
 			if (Camera.names.length == 0 || !Capabilities.hasVideoEncoder)
 				return false;
 			if (!Camera.getCamera())
 				return false;
 			return true;
 		}
-		public function checkMicrophoneAvailability():Boolean {
+		public function isMicrophoneAvailable():Boolean {
 			trace("MediaPermissions::checkMicrophoneAvailability()");
 			if (Microphone.names.length == 0 || !Capabilities.hasAudioEncoder)
 				return false;
@@ -195,11 +198,17 @@ package ktu.media {
 			return true;
 		}
 		
+        /**
+         * TODO: make this aware of device availability. if no cameras, it should check microphone, and vice versa.
+         * but maybe not, because i should still be able to ask for 
+         * 
+         */
 		private function quickAccessPermissions():void {
 			trace("MediaPermissions::quickAccessPermissions()");
 			_netConnect = new NetConnection();
 			_netConnect.connect(null);
 			_netStream = new NetStream(_netConnect);
+            _microphone = Microphone.getMicrophone();
 			_netStream.attachAudio(_microphone);
 		}
 		

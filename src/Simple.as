@@ -21,9 +21,15 @@
  */
 package {
 	
+    import flash.media.Camera;
 	import ktu.events.CameraDetectionEvent;
+    import ktu.events.MediaPermissionsEvent;
+    import ktu.media.CameraChecker;
 	import ktu.media.CameraDetection;
+    import ktu.media.CameraDetection2;
 	import ktu.media.CameraDetectionResult;
+    import ktu.media.MediaPermissions;
+    import ktu.media.MediaPermissionsResult;
 	
 	import flash.display.Sprite;
 	import flash.events.Event;
@@ -51,7 +57,7 @@ package {
 	public class Simple extends Sprite {
 		
 		private var video:Video;
-		private var cd:CameraDetection;
+		private var cd:CameraDetection2;
 		
 		
 		
@@ -66,22 +72,44 @@ package {
 			video = new Video();
 			addChild(video);
 			
-			cd = new CameraDetection (stage);
-			cd.addEventListener (CameraDetectionEvent.RESOLVE, onResolve);
-			cd.begin();
+			//cd = new CameraDetection2 (stage);
+			//cd.addEventListener (CameraDetectionEvent.RESOLVE, onResolve);
+			//cd.begin();
+            
+            var mp:MediaPermissions = new MediaPermissions(stage);
+            mp.addEventListener(MediaPermissionsEvent.RESOLVE, onPermissions);
+            mp.getPermission(Camera);
+            
 		}
+        
+        private function onPermissions(e:MediaPermissionsEvent):void {
+            if (e.code == MediaPermissionsResult.GRANTED) {
+                var cc:CameraChecker = new CameraChecker();
+                cc.timerRepeatCount = 50;
+                cc.minTimesGood = 10;
+                cc.addEventListener(CameraDetectionEvent.RESOLVE, onCC);
+                cc.check(Camera.getCamera());
+            }
+        }
 		
+        private function onCC(e:CameraDetectionEvent):void {
+            trace(e.camera);
+            trace(e.code);
+        }
 		private function onResolve(e:CameraDetectionEvent):void {
 			switch (e.code) {
 				case CameraDetectionResult.SUCCESS :
+                    trace("got a camera!!!");
 					video.attachCamera(e.camera);
 					break;
 				case CameraDetectionResult.NO_PERMISSION :
 					trace("Camera access denied");
 					break;
 				case CameraDetectionResult.NO_CAMERAS :
-					trace("There are no suitable cameras connected to the computer");
+					trace("There are no cameras connected to the computer");
 					break;
+                case CameraDetectionResult.NO_SUCCESS:
+                    trace("there was at least one camera, but none worked!!");
 			}
 		}
 	}
