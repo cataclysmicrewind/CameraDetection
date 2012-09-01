@@ -19,16 +19,16 @@ package ktu.media {
 	 */
 	public class CameraChecker extends EventDispatcher {
 		
-        private var _timer						:Timer;                             // the main timer, user for both permissions and camera
-		private var _timerDelay			    	:uint		= 100;                  // the default delay for testing the camera
-		private var _timerRepeatCount			:uint		= 25;                   // the default repeatCount for testing the camera
-		private var _camFPSAverage				:Number;                            // the average of the fps of the camera we are checking
-		private var _camActivityInit			:Boolean;			                // whether we have passed the camera's activity init phase
-		private var _camActivityAverage			:Number; 			                // the average of the activity of the camera we are checking
-		private var _numTimesGoodCamera			:int		= 0;                    // number of times this camera has shown to work during a single check
-		private var _minTimesGood				:int 		= 5;                    // the min number of times a camera must respond as working
-        private var _video						:Video;                             // the video object to use with the camera to test
-        private var _camera                     :Camera;
+        protected var _timer				:Timer;                             // the main timer, user for both permissions and camera
+		protected var _timerDelay			:uint		= 100;                  // the default delay for testing the camera
+		protected var _timerRepeatCount		:uint		= 25;                   // the default repeatCount for testing the camera
+		protected var _camFPSAverage		:Number;                            // the average of the fps of the camera we are checking
+		protected var _camActivityInit		:Boolean;			                // whether we have passed the camera's activity init phase
+		protected var _camActivityAverage	:Number; 			                // the average of the activity of the camera we are checking
+		protected var _numTimesGoodCamera	:int		= 0;                    // number of times this camera has shown to work during a single check
+		protected var _minTimesGood			:int 		= 5;                    // the min number of times a camera must respond as working
+        protected var _video				:Video;                             // the video object to use with the camera to test
+        protected var _camera               :Camera;
         
         public function get timerDelay():uint { return _timerDelay; }
         public function set timerDelay(value:uint):void { _timerDelay = value; }
@@ -95,7 +95,6 @@ package ktu.media {
 					
 					if (_camActivityInit && _camera.activityLevel < 100 ) _camActivityInit = false;
 					else _camActivityAverage = (_camActivityAverage < 0) ? _camera.activityLevel : ((_camActivityAverage * (_timer.currentCount-1)) + _camera.activityLevel) / _timer.currentCount;
-					trace("act: " + _camera.activityLevel + ":" + _camActivityAverage + "\tfps: " + _camera.fps + ":" + _camFPSAverage);
 					if (_camFPSAverage > 0 && _camActivityAverage >= 0) {
 						_numTimesGoodCamera ++;
 						if (_numTimesGoodCamera > _minTimesGood)
@@ -114,7 +113,7 @@ package ktu.media {
 		 *
 		 * 	prepare Timer object for checking Camera objects
 		 */
-		private function constructTimer ():void {
+		protected function constructTimer ():void {
 			if (_timer) disposeTimer();
 			_timer = new Timer (_timerDelay, _timerRepeatCount);
 			_timer.addEventListener (TimerEvent.TIMER,          tickCheckCamera);
@@ -125,7 +124,7 @@ package ktu.media {
 		 *
 		 * 	prepare Timer object for garbage collection
 		 */
-		private function disposeTimer():void {
+		protected function disposeTimer():void {
 			if (_timer.running) _timer.stop();
 			_timer.removeEventListener (TimerEvent.TIMER,          tickCheckCamera);
 			_timer.removeEventListener (TimerEvent.TIMER_COMPLETE, tickCheckCamera);
@@ -135,7 +134,7 @@ package ktu.media {
 		 *
 		 * 	prepare Camera object for garbage collection
 		 */
-		private function disposeCamera ():void {
+		protected function disposeCamera ():void {
 			_camera.removeEventListener (ActivityEvent.ACTIVITY, onCamActivity);
 			_camera = null;
 		}
@@ -144,16 +143,17 @@ package ktu.media {
 		 * 	This function will dispatch the proper event, then dispose of itself
 		 * @param	result
 		 */
-		private function dispatch (result:String):void {
+		protected function dispatch (result:String):void {
 			if (result != CameraDetectionResult.SUCCESS) _camera = null;
+            var e:CameraDetectionEvent = new CameraDetectionEvent(CameraDetectionEvent.RESOLVE, _camera, result);
 			dispose ();
-			dispatchEvent (new CameraDetectionEvent (CameraDetectionEvent.RESOLVE, _camera, result));
+			dispatchEvent (e);
 		}
         
         /** @private
 		 * 	The Camera object will not update its activity property unless an event has been added to listen for activity changes
 		 */
-		private function onCamActivity(e:ActivityEvent):void { }
+		protected function onCamActivity(e:ActivityEvent):void { }
 	}
 
 }
