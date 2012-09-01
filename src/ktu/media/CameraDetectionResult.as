@@ -38,5 +38,9 @@ package ktu.media {
 		 * code value for when a Cameras was found that works
 		 */
 		public static const SUCCESS			:String = "success";
+		/**
+		 * code value for when CameraDetection is disposed of
+		 */
+		public static const DISPOSED		:String = "disposed";
 	}
 }

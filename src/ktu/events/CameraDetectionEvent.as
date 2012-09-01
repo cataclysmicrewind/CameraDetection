@@ -14,6 +14,7 @@ package ktu.events {
 	
 	import flash.events.Event;
 	import flash.media.Camera;
+	import flash.media.Video;
 	
 	/**
 	 *
@@ -30,6 +31,7 @@ package ktu.events {
 		
 		
 		private var _camera:Camera;
+		private var _video:Video;
 		/**
 		 * returns the camera associated with the event
 		 */
@@ -50,6 +52,8 @@ package ktu.events {
 		 * Specifies whether the user had remembered their permission settings from a previous session
 		 */
 		public function get remembered():Boolean { return _remembered; }
+		
+		public function get video():Video { return _video; }
 		/**
 		 *  Constructor
 		 *
@@ -59,9 +63,10 @@ package ktu.events {
 		 * @param	bubbles
 		 * @param	cancelable
 		 */
-		public function CameraDetectionEvent (type:String, camera:Camera = null, code:String = null, remembered:Boolean = false,  bubbles:Boolean = false, cancelable:Boolean = false ):void {
+		public function CameraDetectionEvent (type:String, camera:Camera = null, code:String = null, video:Video = null, remembered:Boolean = false,  bubbles:Boolean = false, cancelable:Boolean = false ):void {
 			_camera = camera;
 			_code = code;
+			_video = video;
 			_remembered = remembered;
 			super (type, bubbles, cancelable);
 		}

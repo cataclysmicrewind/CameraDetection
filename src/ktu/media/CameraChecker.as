@@ -1,4 +1,7 @@
+
+
 package ktu.media {
+	
     import flash.events.ActivityEvent;
     import flash.events.EventDispatcher;
     import flash.events.TimerEvent;
@@ -26,9 +29,10 @@ package ktu.media {
 		protected var _camActivityInit		:Boolean;			                // whether we have passed the camera's activity init phase
 		protected var _camActivityAverage	:Number; 			                // the average of the activity of the camera we are checking
 		protected var _numTimesGoodCamera	:int		= 0;                    // number of times this camera has shown to work during a single check
-		protected var _minTimesGood			:int 		= 5;                    // the min number of times a camera must respond as working
+		protected var _minTimesGood			:int 		= 5;                    // the min number of times a camera must respond as working (this is mostly for eliminating delays)
         protected var _video				:Video;                             // the video object to use with the camera to test
         protected var _camera               :Camera;
+		protected var _customVideo			:Boolean	= false;
         
         public function get timerDelay():uint { return _timerDelay; }
         public function set timerDelay(value:uint):void { _timerDelay = value; }
@@ -44,15 +48,17 @@ package ktu.media {
 		
 		}
         
-        public function check(camera:Camera):void {
+        public function check(camera:Camera, video:Video = null):void {
+			trace("CameraChecker::check()");
             if (_camera) dispose();
+			_customVideo = Boolean(video);
             _camera = camera;
             _camActivityInit = true;
 			_camActivityAverage = -1;
 			_camFPSAverage = -1;
 			_numTimesGoodCamera = 0;
 			_camera.addEventListener (ActivityEvent.ACTIVITY, onCamActivity);
-            _video = new Video();
+			_video = _customVideo ? video : new Video();
 			_video.attachCamera (_camera);
             constructTimer();
 			_timer.start (); // callback function is tickCheckCamera()
@@ -66,8 +72,9 @@ package ktu.media {
 		 * *Implemented for IDisposable*
 		 */
 		public function dispose ():void {
+			trace("CameraChecker::dispose()");
 			if (_video) {
-				_video.attachCamera (null);
+				if (!_customVideo) _video.attachCamera (null);
 				_video = null;
 			}
 			if (_camera) disposeCamera();
@@ -83,8 +90,7 @@ package ktu.media {
 		 * 		If we are past the camera activity init phase, calculate the average of the activity (this is less crutial)
 		 *
 		 * TimerEvent.COMPLETE
-		 * 		If fps average and activity average are greater than 0, we found a good camera
-		 * 		otherwise, it is not a good camera, check the next one
+		 * 		this only gets fired if the camera doesn't work.
 		 *
 		 * @param	e
 		 */
@@ -92,9 +98,9 @@ package ktu.media {
 			switch (e.type) {
 				case TimerEvent.TIMER:
 					_camFPSAverage = (_camFPSAverage < 0) ? _camera.currentFPS : ((_camFPSAverage * (_timer.currentCount-1)) + _camera.currentFPS) / _timer.currentCount;
-					
-					if (_camActivityInit && _camera.activityLevel < 100 ) _camActivityInit = false;
-					else _camActivityAverage = (_camActivityAverage < 0) ? _camera.activityLevel : ((_camActivityAverage * (_timer.currentCount-1)) + _camera.activityLevel) / _timer.currentCount;
+					if (_camActivityInit && (_camera.activityLevel != -1 && _camera.activityLevel < 100)) _camActivityInit = false;
+					else _camActivityAverage = (_camActivityAverage < 0) ? _camera.activityLevel : ((_camActivityAverage * (_timer.currentCount - 1)) + _camera.activityLevel) / _timer.currentCount;
+					trace("CameraChecker::tickCheckCamera() - act: " + _camera.activityLevel + ":" + _camActivityAverage + "\tfps: " + _camera.fps + ":" + _camFPSAverage);
 					if (_camFPSAverage > 0 && _camActivityAverage >= 0) {
 						_numTimesGoodCamera ++;
 						if (_numTimesGoodCamera > _minTimesGood)
@@ -102,6 +108,7 @@ package ktu.media {
 					}
 					break;
 				case TimerEvent.TIMER_COMPLETE:
+					trace("CameraChecker::tickCheckCamera() - complete... no success");
 /* FAIL*/			dispatch(CameraDetectionResult.NO_SUCCESS);
 					break;
 			}
@@ -114,18 +121,19 @@ package ktu.media {
 		 * 	prepare Timer object for checking Camera objects
 		 */
 		protected function constructTimer ():void {
+			trace("CameraChecker::constructTimer() - repeatCount = " + _timerRepeatCount);
 			if (_timer) disposeTimer();
 			_timer = new Timer (_timerDelay, _timerRepeatCount);
 			_timer.addEventListener (TimerEvent.TIMER,          tickCheckCamera);
 			_timer.addEventListener (TimerEvent.TIMER_COMPLETE, tickCheckCamera);
-			
 		}
 		/** @private
 		 *
 		 * 	prepare Timer object for garbage collection
 		 */
 		protected function disposeTimer():void {
-			if (_timer.running) _timer.stop();
+			trace("CameraChecker::disposeTimer()");
+			_timer.stop();
 			_timer.removeEventListener (TimerEvent.TIMER,          tickCheckCamera);
 			_timer.removeEventListener (TimerEvent.TIMER_COMPLETE, tickCheckCamera);
 			_timer = null;
@@ -135,6 +143,7 @@ package ktu.media {
 		 * 	prepare Camera object for garbage collection
 		 */
 		protected function disposeCamera ():void {
+			trace("CameraChecker::disposeCamera()");
 			_camera.removeEventListener (ActivityEvent.ACTIVITY, onCamActivity);
 			_camera = null;
 		}
@@ -144,9 +153,11 @@ package ktu.media {
 		 * @param	result
 		 */
 		protected function dispatch (result:String):void {
+			trace("CameraChecker::dispatch()");
 			if (result != CameraDetectionResult.SUCCESS) _camera = null;
-            var e:CameraDetectionEvent = new CameraDetectionEvent(CameraDetectionEvent.RESOLVE, _camera, result);
-			dispose ();
+			var video:Video = _customVideo ? _video : null;
+            var e:CameraDetectionEvent = new CameraDetectionEvent(CameraDetectionEvent.RESOLVE, _camera, result, video);
+			//dispose ();
 			dispatchEvent (e);
 		}
         

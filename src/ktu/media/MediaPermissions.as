@@ -3,12 +3,14 @@
 
 package ktu.media {
 	
-	
+	import flash.display.BitmapData;
 	import flash.display.Stage;
 	import flash.events.EventDispatcher;
+	import flash.events.StatusEvent;
 	import flash.events.TimerEvent;
 	import flash.media.Camera;
 	import flash.media.Microphone;
+	import flash.media.Video;
 	import flash.net.NetConnection;
 	import flash.net.NetStream;
 	import flash.system.Capabilities;
@@ -78,8 +80,8 @@ package ktu.media {
      *
      *
      *
-	 * I am using Martin Arvisais' suggested workaround for not knowing when the settings dialog closes:
-     * 		http://bugs.adobe.com/jira/browse/FP-41?page=com.atlassian.jira.plugin.system.issuetabpanels:comment-tabpanel&focusedCommentId=443688#action_443688
+	 * I am using Philippe Piernot's suggested workaround for not knowing when the settings dialog closes:
+     * 		http://bugs.adobe.com/jira/browse/FP-41?focusedCommentId=187534&page=com.atlassian.jira.plugin.system.issuetabpanels%3Acomment-tabpanel#action_187534
      *
      *
 	 * ...
@@ -87,22 +89,35 @@ package ktu.media {
 	 */
 	public class MediaPermissions extends EventDispatcher {
 		
-		static public const QUICK_ACCESS				:String = "quickAccess";			// quick access dialog mode of requesting permission
-		static public const PRIVACY_DIALOG				:String = "privacyDialog";			// full privacy settings dialog mode of requestion permission
+		static public const QUICK_ACCESS			:String = "quickAccess";			// quick access dialog mode of requesting permission
+		static public const PRIVACY_DIALOG			:String = "privacyDialog";			// full privacy settings dialog mode of requestion permission
 		
-		public var 	mode								:String = QUICK_ACCESS;				// permissions request mode
-		public var 	timerDelay		            		:uint		= 200;                  // the default delay for checking permissions
+		public var 	timerDelay		       			:uint		= 200;                  // the default delay for checking permissions
 		
-		private var _stage								:Stage;								// needed to hack the dialog
-		private var _numChildren						:int;								// need this to keep track of when the dialog closes
+		private var _timer							:Timer;								// what checks to see if permissions change
 		
-		private var _microphone							:Microphone;						// used for requesting permission and tracking it
-		private var _netStream							:NetStream;							// used to invoke the quick access mode
-		private var _netConnect							:NetConnection;						// needed for the netstream to work
+		private var _mode							:String = QUICK_ACCESS;				// permissions request mode
 		
-		private var _timer								:Timer;								// what checks to see if permissions change
+		private var _stage							:Stage;								// needed to hack the dialog
 		
-		private var _remembered							:Boolean	= true;					// whether the user had selected remember. (only works with quick access)
+		private var _microphone						:Microphone;						// used for requesting permission and tracking it
+		private var _netStream						:NetStream;							// used to invoke the quick access mode
+		private var _netConnect						:NetConnection;						// needed for the netstream to work
+		private var _video							:Video;								// used for requesting permissions for Camera
+		private var _camera							:Camera;
+		
+		private var _remembered						:Boolean	= true;					// whether the user had selected remember. (only works with quick access)
+		
+		private var _permissionsDialogClosedMax		:uint		= 4;                    // max number of times the dialog should register as closed before confirming
+		private var _permissionsDialogClosedCount	:uint 		= 0;					// number of times the dailog being closed has been recorded
+		
+		public function get mode():String { return _mode; }
+		public function set mode(value:String):void { 
+			if (value == MediaPermissions.QUICK_ACCESS || value == MediaPermissions.PRIVACY_DIALOG) _mode = value;
+		}
+        
+        public function get stage():Stage { return _stage; }
+        public function set stage(value:Stage):void { _stage = value; }
 		
 		
 		/**
@@ -110,7 +125,7 @@ package ktu.media {
 		 * requires the stage because of Flash's bullshit
 		 * 
 		 */
-		public function MediaPermissions(stageRef:Stage) {
+		public function MediaPermissions(stageRef:Stage = null) {
 			_stage = stageRef;
 		}
 		
@@ -127,32 +142,24 @@ package ktu.media {
 		public function getPermission(mediaType:Class = null, mode:String = ""):void {
 			trace("MediaPermissions::getPermission() - type: " + mediaType);
 			if (!checkMediaAvailability(mediaType)) {
-				dispatch(MediaPermissionsResult.NO_DEVICE); // stop, I can't do shit, it don't matter about permissions
+/*FAIL*/		dispatch(MediaPermissionsResult.NO_DEVICE);
 				return;
 			}
             if (havePermission()) {
                 _remembered = true;
-                dispatch(MediaPermissionsResult.GRANTED);
+/*SUCCESS*/		dispatch(MediaPermissionsResult.GRANTED);
+				return;
             }
 			
-			// store the current number of children on the stage. the dialog makes it one more...
-			_numChildren = _stage.numChildren;
-			// setup the timer 
 			_timer = new Timer(timerDelay);
-			_timer.addEventListener(TimerEvent.TIMER, tickNumChildren);
+			_timer.addEventListener(TimerEvent.TIMER, tickCheckPermission);
 			_timer.start();
 			
-			
-			// start this thing
             if (mode == "") mode = this.mode;
-			switch (mode) {
-				case QUICK_ACCESS:
-					quickAccessPermissions();
-					break;
-				case PRIVACY_DIALOG:
-					privacyDialogPermissions();
-					break;
-			}
+			//mode = mode || this.mode;
+			
+			if      (mode == QUICK_ACCESS)   quickAccessPermissions   (mediaType);
+			else if (mode == PRIVACY_DIALOG) privacyDialogPermissions (mediaType);
 		}
 		
         /**
@@ -166,7 +173,12 @@ package ktu.media {
 			else
 				return false;
 		}
-        
+        /**
+         *  send this function either Camera, Microphone, or null and it will return if the media is available.
+		 * if you pass null it will return true only if both Camera and Microphone are available
+         * @param	mediaType
+         * @return
+         */
 		public function checkMediaAvailability(mediaType:Class = null):Boolean {
 			switch(mediaType) {
 				case Microphone:
@@ -182,16 +194,20 @@ package ktu.media {
 		}
 		
 		public function isCameraAvailable():Boolean {
-			trace("MediaPermissions::isCameraAvailable()");
-			if (Camera.names.length == 0 || !Capabilities.hasVideoEncoder)
+			if (Camera.names.length == 0 || !Capabilities.hasVideoEncoder || Capabilities.avHardwareDisable) {
+				trace("MediaPermissions::isCameraAvailable() - false (no cameras, or !hasVideoEncoder");
 				return false;
-			if (!Camera.getCamera())
+			}
+			if (!Camera.getCamera()) {
+				trace("MediaPermissions::isCameraAvailable() - false");
 				return false;
+			}
+			trace("MediaPermissions::isCameraAvailable() - true");
 			return true;
 		}
 		public function isMicrophoneAvailable():Boolean {
 			trace("MediaPermissions::checkMicrophoneAvailability()");
-			if (Microphone.names.length == 0 || !Capabilities.hasAudioEncoder)
+			if (Microphone.names.length == 0 || !Capabilities.hasAudioEncoder || Capabilities.avHardwareDisable)
 				return false;
 			if (!Microphone.getMicrophone()) 
 				return false;
@@ -203,74 +219,109 @@ package ktu.media {
          * but maybe not, because i should still be able to ask for 
          * 
          */
-		private function quickAccessPermissions():void {
+		private function quickAccessPermissions(mediaType:Class):void {
 			trace("MediaPermissions::quickAccessPermissions()");
-			_netConnect = new NetConnection();
-			_netConnect.connect(null);
-			_netStream = new NetStream(_netConnect);
-            _microphone = Microphone.getMicrophone();
-			_netStream.attachAudio(_microphone);
+			if (mediaType == Camera) {
+				connectToCamera();
+			} else if (mediaType == Microphone) {
+				connectToMicrophone();
+			} else {
+				if (isMicrophoneAvailable()) connectToMicrophone();
+				else if (isCameraAvailable()) connectToCamera();
+/*FAIL*/		else dispatch(MediaPermissionsResult.NO_DEVICE);
+			}
 		}
 		
 		
-		private function privacyDialogPermissions():void {
+		private function privacyDialogPermissions(mediaType:Class):void {
 			trace("MediaPermissions::privacyDialogPermissions()");
+			if (mediaType == Camera) {
+				_camera = Camera.getCamera();
+			} else if (mediaType == Microphone) {
+				_microphone = Microphone.getMicrophone();
+			} else {
+				if (isMicrophoneAvailable()) _microphone = Microphone.getMicrophone();
+				else if (isCameraAvailable()) _camera = Camera.getCamera();
+			}
 			Security.showSettings(SecurityPanel.PRIVACY);
 		}
 		
 		
+		private function connectToCamera():void {
+			trace("MediaPermissions::connectToCamera()");
+			_video = new Video();
+			_camera = Camera.getCamera();
+			_camera.addEventListener(StatusEvent.STATUS, onMediaStatus);
+			_video.attachCamera(_camera);
+		}
 		
+		private function connectToMicrophone ():void {
+			trace("MediaPermissions::connectToMicrophone()");
+			_netConnect = new NetConnection();
+			_netConnect.connect(null);
+			_netStream = new NetStream(_netConnect);
+			_microphone = Microphone.getMicrophone();
+			_microphone.addEventListener(StatusEvent.STATUS, onMediaStatus);
+			_netStream.attachAudio(_microphone);
+		}
 		
+		private function onMediaStatus(e:StatusEvent):void {
+			trace("MediaPermissions::onMediaStatus() - " + e.code);
+			if (e.code == "Camera.Muted") {
+/*FAIL*/		dispatch(MediaPermissionsResult.DENIED);
+			} else {
+/*SUCCESS*/    	dispatch(MediaPermissionsResult.GRANTED);
+			}
+		}
 		
 		
 		
 		
 		
 		/**
-		 * keeps checking the status of the Microphone.muted. 
+		 * keeps checking the status of the Microphone.muted / Camera.muted. 
 		 * If .muted = false, then we have permission.
 		 * If not, we check to see if the dialog is closed,
 		 * If it is closed, then we did not get permission
 		 * 
 		 * 
-		 * These variables are used to put a delay on the box being closed... 
-		 * thought it would help in the past not sure it does now
 		 * 
-		 * 	private var _permissionsDialogClosedMax		:uint		= 2;                    // max number of times the dialog should register as closed before confirming
-		 * 	private var _permissionsDialogClosedCount	:uint 		= 0;					// number of times the dailog being closed has been recorded
 		 * 
 		 * @param	e
 		 */
-		private function tickNumChildren(e:TimerEvent):void {
-			//trace("MediaPermissions::tickNumChildren()");
-			var muted:Boolean = _microphone.muted;
+		private function tickCheckPermission(e:TimerEvent):void {
+			var muted:Boolean = (_microphone ? _microphone.muted : (_camera ? _camera.muted : true));
+			trace("MediaPermissions::tickNumChildren() - muted = " + muted);
 			if (!muted) { // permision was granted
-				//trace("MediaPermissions::tickNumChildren() - camera.muted = false");
-				_timer.stop();
-                dispatch(MediaPermissionsResult.GRANTED);
+				trace("MediaPermissions::tickNumChildren() - camera.muted = false");
+/*SUCCESS*/     dispatch(MediaPermissionsResult.GRANTED);
 			} else if (isPermissionDialogClosed()) {	// if box is closed
-				//trace("MediaPermissions::tickNumChildren() - dialog is closed");
-				//_permissionsDialogClosedCount++;
-				//if ( _permissionsDialogClosedCount >= _permissionsDialogClosedMax ) {
-					//trace("MediaPermissions::tickNumChildren() - closed for so long, we ain't gettin permission");
-					_timer.stop();
-					dispatch(MediaPermissionsResult.DENIED);
-				//}
-			}
+				trace("MediaPermissions::tickNumChildren() - dialog is closed");
+				_permissionsDialogClosedCount++;
+				if ( _permissionsDialogClosedCount >= _permissionsDialogClosedMax ) {
+					trace("MediaPermissions::tickNumChildren() - closed for so long, we ain't gettin permission");
+/*FAIL*/			dispatch(MediaPermissionsResult.DENIED);
+				}
+			} else _permissionsDialogClosedCount = 0;
 		}
 		/**
-		 * if the box is open, then there is one more child on the stage than there should be
+		 * if the box is open, then i can't draw the stage
+         * 
+         * this is the bread and butter to the workaround. if i try to draw the stage and i get an error,
+         * then the dialog is still up. thanks Philippe Piernot.
 		 * 
 		 * @return
 		 */
 		private function isPermissionDialogClosed():Boolean {
-			//trace("MediaPermissions::isPermissionDialogClosed() - " + (_stage.numChildren <= _numChildren));
-			if (_stage.numChildren <= _numChildren) {
-				return true;
-			} else {
-				_remembered = false; // if in QUICK_ACCESS mode and the dialog opens, then they did not remember their decision 
-				return false;		 // if in PRIVACY_DIALOG, best to ignore this value, as it won't matter if you remember or not.
-			}
+			var closed:Boolean = true;
+			var dummy:BitmapData = new BitmapData(1, 1);
+			
+			try { 	 dummy.draw(_stage);
+			} catch (error:Error) { closed = false; }
+			
+			trace("MediaPermissions::isPermissionDialogClosed() - " + closed);
+			dummy.dispose();
+			return closed;
 		}
 		
 		
@@ -280,24 +331,28 @@ package ktu.media {
 		
 		
 		/**
-		 * Tell the world what you found...
+		 * this function disposes the object and dispatches an event.
+         * 
 		 * 
 		 * @param	result - what happened?
 		 */
 		private function dispatch (result:String):void {
 			trace("MediaPermissions::dispatch() - " + result);
 			var permissionEvent:MediaPermissionsEvent = new MediaPermissionsEvent(MediaPermissionsEvent.RESOLVE, result, _remembered);
-			dispatchEvent(permissionEvent);
 			dispose();
+			dispatchEvent(permissionEvent);
 		}
 		/**
-		 * 	Dump everything, stop in your tracks. You're done.
+		 * 	this functions prepares the object for garbage collection.
+         *  this will stop any logic from occuring and will prevent any results from firing.
+         * 
+         * if for some reason you want this object to stop and go away, make sure you call this function first so you avoid a memory leak
 		 */
 		public function dispose():void {
 			trace("MediaPermissions::dispose()");
 			if (_timer) {
 				_timer.stop();
-				_timer.removeEventListener(TimerEvent.TIMER, tickNumChildren);
+				_timer.removeEventListener(TimerEvent.TIMER, tickCheckPermission);
 				_timer = null;
 			}
 			if (_netConnect) {
@@ -309,7 +364,18 @@ package ktu.media {
 				_netStream.close();
 				_netStream = null;
 			}
-			_microphone = null;
+			if (_video) {
+				_video.attachCamera(null);
+				_video = null;
+			}
+			if (_microphone) {
+				_microphone.removeEventListener(StatusEvent.STATUS, onMediaStatus);
+				_microphone = null;
+			}
+			if (_camera) {
+				_camera.removeEventListener(StatusEvent.STATUS, onMediaStatus);
+				_camera = null;
+			}
 		}
 	}
 }

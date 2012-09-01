@@ -16,7 +16,7 @@ package ktu.events {
 	
 	/**
 	 *
-	 * 	A CameraDetection object dispatches a CameraDetectionEvent
+	 * 	A MediaPermissions object dispatches a MediaPermissionEvent
 	 *
 	 *
 	 */

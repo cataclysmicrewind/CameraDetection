@@ -26,7 +26,6 @@ package {
     import ktu.events.MediaPermissionsEvent;
     import ktu.media.CameraChecker;
 	import ktu.media.CameraDetection;
-    import ktu.media.CameraDetection2;
 	import ktu.media.CameraDetectionResult;
     import ktu.media.MediaPermissions;
     import ktu.media.MediaPermissionsResult;
@@ -57,7 +56,7 @@ package {
 	public class Simple extends Sprite {
 		
 		private var video:Video;
-		private var cd:CameraDetection2;
+		private var cd:CameraDetection;
 		
 		
 		
@@ -72,13 +71,14 @@ package {
 			video = new Video();
 			addChild(video);
 			
-			//cd = new CameraDetection2 (stage);
-			//cd.addEventListener (CameraDetectionEvent.RESOLVE, onResolve);
-			//cd.begin();
+			cd = new CameraDetection (stage);
+            //cd.stage = stage;
+			cd.addEventListener (CameraDetectionEvent.RESOLVE, onResolve);
+			cd.begin(stage);
             
-            var mp:MediaPermissions = new MediaPermissions(stage);
-            mp.addEventListener(MediaPermissionsEvent.RESOLVE, onPermissions);
-            mp.getPermission(Camera);
+            //var mp:MediaPermissions = new MediaPermissions(stage);
+            //mp.addEventListener(MediaPermissionsEvent.RESOLVE, onPermissions);
+            //mp.getPermission(Camera);
             
 		}
         
