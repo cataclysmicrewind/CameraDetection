@@ -80,7 +80,7 @@ package ktu.media {
      *
      *
      *
-	 * I am using Philippe Piernot's suggested workaround for not knowing when the settings dialog closes:
+	 * I am using Philippe Piernot's suggested workaround for knowing when the settings dialog closes:
      * 		http://bugs.adobe.com/jira/browse/FP-41?focusedCommentId=187534&page=com.atlassian.jira.plugin.system.issuetabpanels%3Acomment-tabpanel#action_187534
      *
      *
@@ -92,7 +92,7 @@ package ktu.media {
 		static public const QUICK_ACCESS			:String = "quickAccess";			// quick access dialog mode of requesting permission
 		static public const PRIVACY_DIALOG			:String = "privacyDialog";			// full privacy settings dialog mode of requestion permission
 		
-		public var 	timerDelay		       			:uint		= 200;                  // the default delay for checking permissions
+		public var 	timerDelay		       			:uint		= 100;                  // the default delay for checking permissions
 		
 		private var _timer							:Timer;								// what checks to see if permissions change
 		
@@ -155,8 +155,7 @@ package ktu.media {
 			_timer.addEventListener(TimerEvent.TIMER, tickCheckPermission);
 			_timer.start();
 			
-            if (mode == "") mode = this.mode;
-			//mode = mode || this.mode;
+			mode = mode || this.mode;
 			
 			if      (mode == QUICK_ACCESS)   quickAccessPermissions   (mediaType);
 			else if (mode == PRIVACY_DIALOG) privacyDialogPermissions (mediaType);
