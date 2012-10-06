@@ -78,7 +78,7 @@ package ktu.media {
      * 
      *
      *
-	 * I am using Philippe Piernot's suggested workaround for not knowing when the settings dialog closes:
+	 * I am using Philippe Piernot's suggested workaround for knowing when the settings dialog closes:
      * 		http://bugs.adobe.com/jira/browse/FP-41?focusedCommentId=187534&page=com.atlassian.jira.plugin.system.issuetabpanels%3Acomment-tabpanel#action_187534
      *
      *
