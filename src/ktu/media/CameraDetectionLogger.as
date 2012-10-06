@@ -1,5 +1,13 @@
-
-
+/**
+ * author:	ktu; 							[blog.cataclysmicrewind.com]
+ * updated:	2012.10.06;
+ * 
+ * This class is free to use and modify, however I request that the header (except example code),
+ * and original package remain intact.
+ * If you choose to modify it, please contact me before releasing the product.
+ * 		[ktu_flash@cataclysmicrewind.com]
+ * 
+ */
 package ktu.media {
 	
 	import flash.display.Stage;
@@ -11,7 +19,7 @@ package ktu.media {
 	
 	
 	/**
-	 * ...
+     * 
 	 * @author ktu
 	 */
 	public class CameraDetectionLogger extends CameraDetection3 {
@@ -50,7 +58,6 @@ package ktu.media {
 			_log.end = getTimer();
 			_log.result = result;
 			super.dispatch(result, camera, video);
-            //call out myself
 		}
 	}
 }

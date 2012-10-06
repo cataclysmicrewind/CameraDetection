@@ -1,8 +1,6 @@
 /**
- * * File:	CameraDetectionResult.as;
- * Author:	Ktu; 							[blog.cataclysmicrewind.com]
- * Updated:	12.17.10;
- * Thanks: Pavel fljot
+ * author:	ktu; 							[blog.cataclysmicrewind.com]
+ * updated:	2012.10.06;
  * 
  * This class is free to use and modify, however I request that the header (except example code),
  * and original package remain intact.
@@ -13,12 +11,9 @@
 package ktu.media {
 	
 	/**
-	 * 
 	 * Enumeration of possible results from using CameraDetection
 	 * 
 	 * 	Used in conjunction with CameraDetectionEvent as the code property
-	 * 
-	 * 
 	 */
 	public class CameraDetectionResult {
 		
@@ -38,9 +33,5 @@ package ktu.media {
 		 * code value for when a Cameras was found that works
 		 */
 		public static const SUCCESS			:String = "success";
-		/**
-		 * code value for when CameraDetection is disposed of
-		 */
-		public static const DISPOSED		:String = "disposed";
 	}
 }

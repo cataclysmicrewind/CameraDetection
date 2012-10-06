@@ -1,14 +1,12 @@
 ﻿/**
- * * File:	CameraDetectionEvent.as;
- * Author:	Ktu; 							[blog.cataclysmicrewind.com]
- * Updated:	12.17.10;
- * Thanks: Pavel fljot
- *
+ * author:	ktu; 							[blog.cataclysmicrewind.com]
+ * updated:	2012.10.06;
+ * 
  * This class is free to use and modify, however I request that the header (except example code),
  * and original package remain intact.
  * If you choose to modify it, please contact me before releasing the product.
  * 		[ktu_flash@cataclysmicrewind.com]
- *
+ * 
  */
 package ktu.events {
 	

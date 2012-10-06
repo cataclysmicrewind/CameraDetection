@@ -4,14 +4,14 @@
   <output>
     <movie outputType="Application" />
     <movie input="" />
-    <movie path="bin\MultiTestVerbose.swf" />
+    <movie path="bin\permissionsTest.swf" />
     <movie fps="30" />
-    <movie width="500" />
-    <movie height="400" />
+    <movie width="615" />
+    <movie height="380" />
     <movie version="9" />
     <movie minorVersion="0" />
     <movie platform="Flash Player" />
-    <movie background="#0D0D0D" />
+    <movie background="#0A0A0A" />
   </output>
   <!-- Other classes to be compiled into your SWF -->
   <classpaths>
@@ -71,7 +71,7 @@
   </library>
   <!-- Class files to compile (other referenced classes will automatically be included) -->
   <compileTargets>
-    <compile path="src\MultiTest.as" />
+    <compile path="src\PermissionsTest.as" />
   </compileTargets>
   <!-- Paths to exclude from the Project Explorer tree -->
   <hiddenPaths>

@@ -13,6 +13,7 @@ package ktu.media {
 	
     import adobe.utils.CustomActions;
 	import flash.display.Stage;
+    import flash.events.Event;
 	import flash.events.EventDispatcher;
 	import flash.media.Camera;
 	import flash.media.Video;
@@ -186,11 +187,8 @@ package ktu.media {
 		 *
 		 */
 		public function CameraDetection (stage:Stage = null):void {
-			trace("CameraDetection::constructor()");
             _stage = stage;
 		}
-        
-        
 		/**
 		 * begin searching for the first working Camera object. 														<br>
 		 * you must send the stage every time!!!! but you are likely to only use this once in an application			<br>
@@ -198,19 +196,16 @@ package ktu.media {
 		 * This method first checks the defaultCamera.
 		 */
 		public function begin (customVideo:Video = null, stage:Stage = null):void {
-			trace("CameraDetection::begin()");
 			_stage = _stage || stage ;
 			_customVideo = customVideo;
 			_numCameras = Camera.names.length;
 			_currentCameraIndex = 0;
-			trace("CameraDetection::begin() - numCameras = " + _numCameras);
 			_mediaPermissions.stage = stage;
 			if (!_mediaPermissions.isCameraAvailable()) {
-				trace("CameraDetection::begin() - camera is not available");
 /* FAIL */		dispatch (CameraDetectionResult.NO_CAMERAS);
                 return;
             }
-			trace("CameraDetection::begin() - mediaPermissions.getPermission()");
+            _mediaPermissions.stage = _stage;
             _mediaPermissions.addEventListener(MediaPermissionsEvent.RESOLVE, onMediaPermissionsResolve);
             _mediaPermissions.getPermission(Camera);
 		}
@@ -222,17 +217,17 @@ package ktu.media {
 		 * 																																	<br>
 		 */
 		public function dispose ():void {
-			trace("CameraDetection::dispose()");
             _mediaPermissions.dispose();
             _cCheck.removeEventListener(CameraDetectionEvent.RESOLVE, onCChecker);
             _cCheck.dispose();
 			_stage = null;
 		}
-		/*
-		 * 
-		 * 	PERMISSIONS CODE
-		 * 
-		 */
+        override public function addEventListener(type:String, listener:Function, useCapture:Boolean = false, priority:int = 0, useWeakReference:Boolean = false):void {
+            if (type == MediaPermissionsEvent.DIALOG_STATUS || type == MediaPermissionsEvent.RESOLVE)
+                return _mediaPermissions.addEventListener(type, listener, useCapture, priority, useWeakReference);
+            else
+                super.addEventListener(type, listener, useCapture, priority, useWeakReference);
+        }
 	    /** @private
 		 *
 		 * when requesting permission to use the camera, sometimes the settings dialog does not dispatch its events.
@@ -246,17 +241,13 @@ package ktu.media {
 		 * @param	e
 		 */
 	    private function onMediaPermissionsResolve(e:MediaPermissionsEvent):void {
-		    trace("CameraDetection::onMediaPermissionsResolve()");
 		    _rememberedPermissions = e.remembered;
 		    if (e.code == MediaPermissionsResult.GRANTED) {
-			    trace("CameraDetection::onMediaPermissionsResolve() - permision granted");
 /*INFO*/		dispatchEvent (e);
 			    havePermissions();
 		    } else if (e.code == MediaPermissionsResult.DENIED) {
-			    trace("CameraDetection::onMediaPermissionsResolve() - permision denied");
 /*FAIL*/		dispatch (MediaPermissionsResult.DENIED);
 		    } else if (e.code == MediaPermissionsResult.NO_DEVICE) {
-			    trace("CameraDetection::onMediaPermissionsResolve() - no devices!!!");
 /*FAIL*/		dispatch (CameraDetectionResult.NO_CAMERAS);
 		    }
 	    }
@@ -266,30 +257,18 @@ package ktu.media {
 		 *
 		 */
 		protected function havePermissions():void {
-			trace("CameraDetection::havePermissions()");
             var camera:Camera = Camera.getCamera ();
 			_defaultCameraName = camera.name;
-			trace("CameraDetection::checking defaultCamera - " + camera.name + " - " + camera);
             _cCheck.addEventListener(CameraDetectionEvent.RESOLVE, onCChecker);
             _cCheck.check(camera, _customVideo);
 		}
-		/*
-		 * 
-		 * CAMERA CODE
-		 * 
-		 */
 		/**
          * event handler for checking a camera
          * @param	e
          */
 		protected function onCChecker(e:CameraDetectionEvent):void {
-            if (e.code == CameraDetectionResult.SUCCESS) {
-				trace("CameraDetection::onCChecker() - success!");
-/*SUCCESS*/		dispatch(e.code, e.camera, e.video);
-            } else {
-				trace("CameraDetection::onCCHecker() - not success, next camera");
-                nextCamera();
-            }
+/*SUCCESS*/ if (e.code == CameraDetectionResult.SUCCESS) dispatch(e.code, e.camera, e.video);
+            else nextCamera();
         }
 		/** @private
 		 *
@@ -302,23 +281,19 @@ package ktu.media {
 		 *
 		 */
 		protected function nextCamera ():void {
-			trace("CameraDetection::nextCamera()");
 			if (_currentCameraIndex < _numCameras) {
 				var camera:Camera = Camera.getCamera ( String (_currentCameraIndex) );
 				_currentCameraIndex ++;
 				if (camera.name == _defaultCameraName) nextCamera ();  // skip it because it always gets checked first
 				else _cCheck.check(camera, _customVideo);
-			} else
-/* FAIL */		dispatch (CameraDetectionResult.NO_SUCCESS);
+/*FAIL*/	} else dispatch (CameraDetectionResult.NO_SUCCESS);
 		}
-		
 		/** @private
 		 *
 		 * 	This function will dispatch the proper event, then dispose of itself
 		 * @param	result
 		 */
 		protected function dispatch (result:String, camera:Camera = null, video:Video = null):void {
-			trace("CameraDetection::dispatch() - " + result);
 			dispose ();
             dispatchEvent (new CameraDetectionEvent (CameraDetectionEvent.RESOLVE, camera, result, video));
 		}

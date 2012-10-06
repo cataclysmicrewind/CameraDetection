@@ -49,6 +49,7 @@ package {
 	 *			function onCameraResolve (e:CameraDetectionEvent):void {
 	 *				switch (e.code) {
 	 * 					case CameraDetectionResult.SUCCESS:
+	 * 					case CameraDetectionResult.NO_SUCCESS:
 	 * 					case CameraDetectionResult.NO_PERMISSION:
 	 * 					case CameraDetectionResult.NO_CAMERAS:
 	 * 																																	</listing>
@@ -57,7 +58,6 @@ package {
 		
 		private var video:Video;
 		private var cd:CameraDetection;
-		
 		
 		
 		public function Simple() {
@@ -72,28 +72,12 @@ package {
 			addChild(video);
 			
 			cd = new CameraDetection (stage);
-            //cd.stage = stage;
 			cd.addEventListener (CameraDetectionEvent.RESOLVE, onResolve);
-			cd.begin(stage);
-            
-            //var mp:MediaPermissions = new MediaPermissions(stage);
-            //mp.addEventListener(MediaPermissionsEvent.RESOLVE, onPermissions);
-            //mp.getPermission(Camera);
+            cd.addEventListener(MediaPermissionsEvent.DIALOG_STATUS, onDialogStatus);
+			cd.begin();
             
 		}
-        
-        private function onPermissions(e:MediaPermissionsEvent):void {
-            if (e.code == MediaPermissionsResult.GRANTED) {
-                var cc:CameraChecker = new CameraChecker();
-                cc.timerRepeatCount = 50;
-                cc.minTimesGood = 10;
-                cc.addEventListener(CameraDetectionEvent.RESOLVE, onCC);
-                cc.check(Camera.getCamera());
-            }
-        }
-		
-        private function onCC(e:CameraDetectionEvent):void {
-            trace(e.camera);
+        private function onDialogStatus (e:MediaPermissionsEvent):void {
             trace(e.code);
         }
 		private function onResolve(e:CameraDetectionEvent):void {

@@ -55,29 +55,6 @@ package  {
 			if (e) removeEventListener (Event.ADDED_TO_STAGE, init);
 			// entry point
 			
-			createButton ();
-			createTextField ();
-		}
-		
-		private function createVideo (camera:Camera):void {
-			camera.setMode (75, 75, 15, true);
-			_video = new Video (75, 75);
-			_video.x = 50;
-			_video.y = 100;
-			addChild (_video);
-			_video.attachCamera (camera);
-		}
-		
-		private function createTextField():void{
-			_textField = new TextField ();
-			_textField.autoSize = "left";
-			_textField.x = 50;
-			_textField.y = 35;
-			_textField.text = "Turn On";
-			addChild (_textField);
-		}
-		
-		private function createButton():void{
 			_button = new Sprite ();
 			_button.graphics.beginFill (0x046793);
 			_button.graphics.drawRect (0, 0, 75, 20);
@@ -85,6 +62,13 @@ package  {
 			_button.x = _button.y = 50;
 			addChild (_button);
 			_button.addEventListener (MouseEvent.CLICK, onButtonClick);
+			
+            _textField = new TextField ();
+			_textField.autoSize = "left";
+			_textField.x = 50;
+			_textField.y = 35;
+			_textField.text = "Turn On";
+			addChild (_textField);
 		}
 		
 		private function onButtonClick(e:MouseEvent):void {
@@ -95,22 +79,13 @@ package  {
 				_textField.text = "Turn On";
 				close ();
 			}
-			
 		}
 		
-		private function close ():void {
-			if (_video) {
-				_video.attachCamera (null);
-				removeChild (_video);
-			}
-			_cd.dispose ();
-		}
 		
 		private function run():void {
-			createVideo(Camera.getCamera());
 			_cd = new CameraDetection (stage);
 			_cd.addEventListener (CameraDetectionEvent.RESOLVE, onResolve);
-			//_cd.begin ();
+			_cd.begin ();
 		}
 		
 		private function onResolve(e:CameraDetectionEvent):void {
@@ -126,7 +101,21 @@ package  {
 				break;
 			}
 		}
-		
+		private function createVideo (camera:Camera):void {
+			camera.setMode (75, 75, 15, true);
+			_video = new Video (75, 75);
+			_video.x = 50;
+			_video.y = 100;
+			addChild (_video);
+			_video.attachCamera (camera);
+		}
+        private function close ():void {
+			if (_video) {
+				_video.attachCamera (null);
+				removeChild (_video);
+			}
+			_cd.dispose ();
+		}
 	}
 
 }
