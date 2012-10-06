@@ -17,16 +17,17 @@ h2. camera detection so you don't have to
 
 h2. simple api
 
-    one event
-    all the situations
-    tell it to begin
-    wait
+    * one event
+    * all the situations handled
+    * tell it to begin
+    * wait
 
     
     
 h2. show me
 
     ok... here it is... the big dump
+    
     i will be logging this usage
     
 h2. logging
@@ -38,11 +39,9 @@ h2. why
 
     let me tell you the problems
     
-    first media permissions
-        when does the dialog close? - simple, statusEvent
-        what if they choose deny and remember? - ugh, gotta run that workaround to knwo the popup don't show up
-        if they dop that, then waht? - show privacy dialog, track muted property, event won't fire.
-    getting a CameraObject
-        
+    dealing with permissions in as3 sucks. the events are flakey and it hurts to deal with.
     
-h2. 
+    look at the wiki home page, i wrote something good there about the problems.
+    
+    however, this handles when the dialog opens, when it closes, when you get permission or get denied, and when a camera is found that works. this is great stuff
+    
