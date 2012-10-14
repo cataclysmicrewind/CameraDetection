@@ -90,7 +90,7 @@ package ktu.media {
 		static public const QUICK_ACCESS			:String = "quickAccess";			// quick access dialog mode of requesting permission
 		static public const PRIVACY_DIALOG			:String = "privacyDialog";			// full privacy settings dialog mode of requestion permission
 		
-		public var 	timerDelay		       			:uint		= 200;                  // the default delay for checking permissions
+		public var 	timerDelay		       			:uint		= 100;                  // the default delay for checking permissions
 		public var  stage							:Stage;								// needed to hack the dialog
 		
 		private var _timer							:Timer;								// what checks to see if permissions change
@@ -106,8 +106,9 @@ package ktu.media {
         private var _dispatched                     :Boolean    = false;                // if i have dispatched at least once before
 		private var _remembered						:Boolean	= false;				// whether the user had selected remember. (only works with quick access)
         private var _dialogIsOpen                   :Boolean    = false;                // is the dialog open now?!?!?
+        private var _userPermission                 :Boolean;
 		
-		private var _permissionsDialogClosedMax		:uint		= 4;                    // max number of times the dialog should register as closed before confirming
+		private var _permissionsDialogClosedMax		:uint		= 6;                    // max number of times the dialog should register as closed before confirming
 		private var _permissionsDialogClosedCount	:uint 		= 0;					// number of times the dailog being closed has been recorded
         
 		
@@ -156,10 +157,10 @@ package ktu.media {
          */
 		public function checkMediaAvailability(mediaType:Class = null):Boolean {
 			switch(mediaType) {
-				case Microphone:
-					return isMicrophoneAvailable();
 				case Camera:
 					return isCameraAvailable();
+				case Microphone:
+					return isMicrophoneAvailable();
 				case null:
 					var cam:Boolean = isCameraAvailable();
 					var mic:Boolean = isMicrophoneAvailable();
@@ -249,8 +250,8 @@ package ktu.media {
 		}
 		
 		private function onMediaStatus(e:StatusEvent):void {
-/*SUCCESS*/	if      (e.code == "Camera.Unmuted") dispatch(MediaPermissionsResult.GRANTED); 
-/*FAIL*/    else if (e.code == "Camera.Muted")   dispatch(MediaPermissionsResult.DENIED);
+/*SUCCESS*/	if      (e.code == "Camera.Unmuted") _userPermission = true;// dispatch(MediaPermissionsResult.GRANTED); 
+/*FAIL*/    else if (e.code == "Camera.Muted")   _userPermission = false;// dispatch(MediaPermissionsResult.DENIED);
 		}
 		
 		/**
@@ -262,12 +263,11 @@ package ktu.media {
 		 */
 		private function tickCheckPermission(e:TimerEvent):void {
 			var muted:Boolean = (_microphone ? _microphone.muted : (_camera ? _camera.muted : true));
-/*SUCCESS*/ if (!muted) dispatch(MediaPermissionsResult.GRANTED);
+/*SUCCESS*/ if (!muted) _userPermission = true;// dispatch(MediaPermissionsResult.GRANTED);
 			if (isPermissionDialogClosed()) {	// if box is closed
 				_permissionsDialogClosedCount++;
 				if ( _permissionsDialogClosedCount >= _permissionsDialogClosedMax ) {
-                    _timer.stop();
-/*FAIL*/			dispatch(MediaPermissionsResult.DENIED);
+/*FAIL*/			_userPermission = false;//dispatch(MediaPermissionsResult.DENIED);
                     setDialogIsOpen(false);
 				}
 			} else {
@@ -299,18 +299,19 @@ package ktu.media {
 		 * @param	result - what happened?
 		 */
 		private function dispatch (result:String):void {
-            if (_dispatched) dispose();
-            else {
-                var permissionEvent:MediaPermissionsEvent = new MediaPermissionsEvent(MediaPermissionsEvent.RESOLVE, result, _remembered);
-                dispose();
-                dispatchEvent(permissionEvent);
-                _dispatched = true;
-            }
+            var permissionEvent:MediaPermissionsEvent = new MediaPermissionsEvent(MediaPermissionsEvent.RESOLVE, result, _remembered);
+            dispose();
+            dispatchEvent(permissionEvent);
 		}
         private function setDialogIsOpen(value:Boolean):void {
             if (value != _dialogIsOpen) {
                 _dialogIsOpen = value;
-                dispatchEvent(new MediaPermissionsEvent(MediaPermissionsEvent.DIALOG_STATUS, value? MediaPermissionsResult.DIALOG_OPEN : MediaPermissionsResult.DIALOG_CLOSED));
+                if (_dialogIsOpen) {
+                    dispatchEvent(new MediaPermissionsEvent(MediaPermissionsEvent.DIALOG_STATUS, MediaPermissionsResult.DIALOG_OPEN));
+                } else {
+                    dispatchEvent(new MediaPermissionsEvent(MediaPermissionsEvent.DIALOG_STATUS, MediaPermissionsResult.DIALOG_CLOSED));
+                    dispatch(_userPermission ? MediaPermissionsResult.GRANTED : MediaPermissionsResult.DENIED);
+                }
             }
         }
 		/**
@@ -320,7 +321,8 @@ package ktu.media {
          * if for some reason you want this object to stop and go away, make sure you call this function first so you avoid a memory leak
 		 */
 		public function dispose():void {
-			if (_timer && !_timer.running) {
+			if (_timer) {
+                _timer.stop();
 				_timer.removeEventListener(TimerEvent.TIMER, tickCheckPermission);
 				_timer = null;
                 _permissionsDialogClosedCount = 0;
