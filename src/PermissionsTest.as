@@ -138,17 +138,17 @@ package {
         private function onDialogStatus(e:MediaPermissionsEvent):void {
             if (mediaPermissions.mode == MediaPermissions.QUICK_ACCESS) {
                 if (e.code == MediaPermissionsResult.DIALOG_OPEN) {
-                    output.log("MediaPermissionsResult.DIALOG_OPEN");
+                    output.log("MediaPermissionsResult.DIALOG_OPEN - quick access");
                     output.log("waiting for user input");
                 } else {
-                    output.log("MediaPermissionsResult.DIALOG_CLOSED");
+                    output.log("MediaPermissionsResult.DIALOG_CLOSED - quick access");
                 }
             } else {
                 if (e.code == MediaPermissionsResult.DIALOG_OPEN) {
-                    output.log("security dialog opened");
+                    output.log("MediaPermissionsResult.DIALOG_OPEN - privacy dialog");
                     output.log("waiting for user input");
                 } else {
-                    output.log("security dialog closed");
+                    output.log("MediaPermissionsResult.DIALOG_CLOSED - privacy dialog");
                 }
             }
         }
