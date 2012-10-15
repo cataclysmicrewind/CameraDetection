@@ -1,0 +1,277 @@
+<!doctype html>
+<html>
+  <head>
+    <meta charset="utf-8">
+    <meta http-equiv="X-UA-Compatible" content="chrome=1">
+    <title>Cameradetection by cataclysmicrewind</title>
+    <link rel="stylesheet" href="stylesheets/styles.css">
+    <link rel="stylesheet" href="stylesheets/pygment_trac.css">
+    <script src="https://ajax.googleapis.com/ajax/libs/jquery/1.7.1/jquery.min.js"></script>
+    <script src="javascripts/respond.js"></script>
+    <!--[if lt IE 9]>
+      <script src="//html5shiv.googlecode.com/svn/trunk/html5.js"></script>
+    <![endif]-->
+    <!--[if lt IE 8]>
+    <link rel="stylesheet" href="stylesheets/ie.css">
+    <![endif]-->
+    <meta name="viewport" content="width=device-width, initial-scale=1, user-scalable=no">
+
+  </head>
+  <body>
+      <div id="header">
+        <nav>
+          <li class="fork"><a href="https://github.com/cataclysmicrewind/CameraDetection">View On GitHub</a></li>
+          <li class="downloads"><a href="https://github.com/cataclysmicrewind/CameraDetection/zipball/master">ZIP</a></li>
+          <li class="downloads"><a href="https://github.com/cataclysmicrewind/CameraDetection/tarball/master">TAR</a></li>
+          <li class="title">DOWNLOADS</li>
+        </nav>
+      </div><!-- end header -->
+
+    <div class="wrapper">
+
+      <section>
+        <div id="title">
+          <h1>Cameradetection</h1>
+          <p>as3 camera detection so you don't have to</p>
+          <hr>
+          <span class="credits left">Project maintained by <a href="https://github.com/cataclysmicrewind">cataclysmicrewind</a></span>
+          <span class="credits right">Hosted on GitHub Pages &mdash; Theme by <a href="http://twitter.com/#!/michigangraham">mattgraham</a></span>
+        </div>
+
+        <h2>what does it do?!</h2>
+
+<p>CameraDetection is a simple library that handles all of the hassle about getting a WORKIGN Camera object in flash. This library also solves the age old problem of getting permission from the user! </p>
+
+<p>here is what CameraDetection can tell you:</p>
+
+<ul>
+<li>when the media permission dialog opens AND closes!</li>
+<li>if there are no cameras installed</li>
+<li>if the user granted or denied permission</li>
+<li>if the user had 'remembered' their decision from last time</li>
+<li>if there were cameras to use, but none of them worked</li>
+</ul><hr><p><strong><em>disclaimer:</em></strong> <em>although i am confident about the code i have written, i cannot guarantee it is bug free.</em></p>
+
+<hr><p><br><br></p>
+
+<h2>how to use</h2>
+
+<p>below are all the necessary steps to get all the info you need from CameraDetection.
+it should all be very straight forward.</p>
+
+<pre><code>import ktu.events.CameraDetectionEvent;
+import ktu.events.MediaPermissionsEvent;
+import ktu.media.CameraDetection;
+import ktu.media.CameraDetectionResult;
+import ktu.media.MediaPermissionsResult;
+
+var cd:CameraDetection = new CameraDetection(stage);
+cd.addEventListener (CameraDetectionEvent.RESOLVE, onResolve);
+cd.addEventListener(MediaPermissionsEvent.DIALOG_STATUS, onDialogStatus);
+cd.begin();
+
+function onDialogStatus (e:MediaPermissionsEvent):void {
+    switch (e.code) {
+        case MediaPermissionsResult.DIALOG_OPEN:
+            trace("dialog opened");
+            break;
+        case MediaPermmissionsResult.DIALOG_CLOSED:
+            trace("dialog closed");
+            break;
+    }
+}
+function onResolve(e:CameraDetectionEvent):void {
+    switch (e.code) {
+        case CameraDetectionResult.SUCCESS :
+            trace("got a camera!!! - " + e.camera.name);
+            break;
+        case CameraDetectionResult.NO_PERMISSION :
+            trace("Camera access denied");
+            break;
+        case CameraDetectionResult.NO_CAMERAS :
+            trace("There are no cameras connected to the computer");
+            break;
+        case CameraDetectionResult.NO_SUCCESS:
+            trace("there was at least one camera, but none worked!!");
+            break;
+    }
+}
+</code></pre>
+
+<p><br><br></p>
+
+<h2>show me</h2>
+
+<p>let me show you how this works and what you can get from it</p>
+
+<hr><p>by clicking on the link you AGREE to allow me to capture anonymous data about the camera detection process: CameraDetection Example (coming soon!)</p>
+
+<hr><p><br><br></p>
+
+<h2>why &amp; how</h2>
+
+<p>there are a few important points to address with why i made this library and how it works. first, if you have worked with Camera before, getting permission to use the device is a pain. no one likes the settings dialog in the flash player. well, that issue has been solved. next, there is the problem of Camera.getCamera() returning a valid object but the camera doesn't actually work. and lastly, there are general problems with certain operating systems and drivers.</p>
+
+<p><br></p>
+
+<h3>MediaPermissions</h3>
+
+<p>to start, <a href="https://bugs.adobe.com/jira/browse/FP-41">this bug</a> in adobe's jira which started in 2008 is still open, and untouched. and it was changed from a bug to a feature request. this bug is part of what makes working with media devices a nightmare. </p>
+
+<p>but guess what! i believe i have solved this problem, lets look at how to use MediaPermissions:</p>
+
+<pre><code>import ktu.events.MediaPermissionsEvent;
+import ktu.media.MediaPermissions;
+import ktu.media.MediaPermissionsResult;
+
+var mp:MediaPermissions = new MediaPermissions(stage);
+mp.mode = MediaPermissions.PRIVACY_DIALOG;
+mp.addEventListener (MediaPermissionsEvent.DIALOG_STATUS, onDialogStatus);
+mp.addEventListener (MediaPermissionsEvent.RESOLVE, onPermissionsResolve);
+mp.getPermission(Camera);
+
+function onDialogStatus (e:MediaPermissionsEvent):void {
+    if (e.code == MediaPermissionsResult.DIALOG_OPEN)
+        trace ("dialog opened");
+    else if (e.code == MediaPermissionsResult.DIALOG_CLOSED)
+        trace ("dialog closed");
+}
+
+function onPermissionsResolve (e:MediaPermissionsEvent):void {
+    switch (e.code) {
+        case MediaPermissionsResult.GRANTED :
+            trace ("permissions granted");
+            break;
+        case MediaPermissionsResult.DENIED:
+            trace("permissions denied");
+            break;
+        case MediaPermissionsResult.NO_DEVICE:
+            trace("there was no device to use!");
+            break;
+    }
+}
+</code></pre>
+
+<p><strong>mode</strong> lets you choose whether to display the quick access dialog box, or the privacy dialog box.</p>
+
+<p><strong>timerDelay</strong> lets you choose how often it checks to see if the dialog has closed</p>
+
+<p><strong>stage</strong> it NEEDS a reference to the stage for it to work, pass in through constructor, or by public var</p>
+
+<p><br></p>
+
+<h3>how it works</h3>
+
+<p>thanks to Philippe Piernot with his workaround, this object can actually work. his workaround makes an attempt to draw the stage into a BitmapData object. if trying to draw the stage cause an error, then the dialog is still open.</p>
+
+<p>there are a few key components to what MediaPermissions needs to do in order to compensate for the 'feature request' we have been asking for since 2008.</p>
+
+<p>first, as documentation would suggest, listening to the StatusEvent.STATUS on a Media device handles most cases. it breaks down when the user selects the 'remember' checkbox. </p>
+
+<p>if you 'remember' your decision and then use the quick access dialog. NOTHING HAPPENS! no StatusEvent is fired. you get no information to tell you that the dialog even showed up!</p>
+
+<p>if you use the privacy dialog, the status event will fire, but the user could choose to never close the dialog! and, the user could not select and option, but simply click close, and in that case, no event is fired natively.</p>
+
+<p>so, using a combination of the status event, and this workaround on a timer, MediaPermissions can simply handle all of the possibilities.</p>
+
+<p>if you desire to know exactly how it works, just look in the source! it is not all that complicated!</p>
+
+<p><br></p>
+
+<h3>CameraChecker</h3>
+
+<p>this class is just an abstraction that puts all the code of checking if a Camera is responding in one place.</p>
+
+<p>if you were to use this class on your own it might look something like this:</p>
+
+<pre><code>import ktu.media.CameraChecker;
+
+var cameraChecker:CameraChecker = new CameraChecker();
+cameraChecker.timerDelay = 50;
+cameraChecker.repeatCount = 100; 
+cameraChecker.blackoutDelay = 800;
+cameraChecker.addEventListener(CameraDetectionEvent.RESOLVE, onCCheckerResolve);
+
+var camera:Camera = Camera.getCamera();
+cameraChecker.check(camera);
+
+function onCCheckerResolve(e:CameraDetectionEvent.RESOLVE):void {
+    if (e.code == CameraDetectionResult.SUCCESS) {
+        trace("camera is good to go");
+    } else if (e.code == CameraDetectionResult.NO_SUCCESS) {
+        trace ("camera is bad");
+    }
+}
+</code></pre>
+
+<p><strong>timerDelay</strong> and <strong>repeatCount</strong> properties allow you to specify how long to check the Camera. these directly relate to the Timer used in the class</p>
+
+<p><strong>blackoutDelay</strong>: this value is an int in milliseconds that the CameraChecker should wait, before dispatching that the camera is 'good'. this is only applied if the camera is good, otherwise it is ignored. </p>
+
+<p>personally, i have always hated that when you first start using a camera, that it fades from black to actual imagery. watching that happens just makes me cringe. so, this value is designed to let you attempt to hide that from the user. </p>
+
+<p><br></p>
+
+<h2>Cameras Suck</h2>
+
+<p>CameraChecker has to deal with the shitty limitations of the Camera implementation.</p>
+
+<p>first, the most common problem that occurs when using Camera in flash is that you will get a valid object from Camera.getCamera() but it actually won't work for you.</p>
+
+<p><br></p>
+
+<h3>causes</h3>
+
+<ol>
+<li><p>if the camera is already in use. This is most common if you have skype running on your computer. you don't even have to be using the camera at that moment, but the last i checked, if skype is open, it is stealing your camera.</p></li>
+<li><p>mac laptops have/used to have multiple cameras listed even though they were not connected. this frequently showed up as DVI camera and something else (sorry for the poor memory). if for some reason one of these 'disconnected' cameras was chosen as the default, then you will experience your problem.</p></li>
+<li><p>the google chat/video adapter have caused problems in the past. simply having installed it caused many issues for people for a while (this may have started ~2011?) since you never know which OS or player version you'll get this may still be an issue </p></li>
+</ol><p><br></p>
+
+<h3>why this problem sucks</h3>
+
+<p>determining if a Camera is actually working is a pain. the best option we have is to monitor the Camera's activity and fps to see if it is working.</p>
+
+<p>what you should expect</p>
+
+<p>to determine the behavior of a working camera, i use a timer to check on the fps and activity levels of the Camera. this is a common result: (this timer is set at 100ms)</p>
+
+<pre><code>fps:0   activity:-1
+ ...  x20  ...
+fps:0   activity:100
+fps:0   activity:100
+fps:8.1 activity:5
+fps:8.5 activity:46
+fps:8.2 activity:3
+fps:8.4 activity:3
+</code></pre>
+
+<p>so, the camera appears unresponsive for 2.1 whole seconds!!! what!?!?!? I know. but then it finally kicks in. this is common behavior even though I am testing this on a 6core 3.3GHz machine with little running. my library keeps checking the camera waiting for these activity and fps levels to change.</p>
+
+<p>what you get when it doesn't work</p>
+
+<p>can you guess what happens when the camera doesn't work? you guessed it!</p>
+
+<p>you get this non-stop, forever</p>
+
+<pre><code>fps:0 activity:-1
+fps:0 activity:-1
+fps:0 activity:-1
+</code></pre>
+
+<p>so my code will check a camera by default for 3 whole seconds, waiting for some activity, and then quit. this is the bad part, maybe all the hardware sucks and the cpu is already overloaded and this makes it take longer than 3 seconds to get a response? woe is us actionscript guys. </p>
+
+<p><br><br></p>
+
+<h2>conclusion</h2>
+
+<p>hopefully my library is useful. if you notice something wrong, please tell me!</p>
+
+<p>i have despised this problem for years, and it frustrates me more knowing that adobe continues to ignore this. one of the few things flash still has over html is utilizing the webcam. </p>
+      </section>
+
+    </div>
+    <!--[if !IE]><script>fixScale(document);</script><![endif]-->
+    
+  </body>
+</html>
