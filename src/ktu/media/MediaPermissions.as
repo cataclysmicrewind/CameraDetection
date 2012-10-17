@@ -250,8 +250,8 @@ package ktu.media {
 		}
 		
 		private function onMediaStatus(e:StatusEvent):void {
-/*SUCCESS*/	if      (e.code == "Camera.Unmuted") _userPermission = true;// dispatch(MediaPermissionsResult.GRANTED); 
-/*FAIL*/    else if (e.code == "Camera.Muted")   _userPermission = false;// dispatch(MediaPermissionsResult.DENIED);
+            if      (e.code == "Camera.Unmuted") _userPermission = true;
+            else if (e.code == "Camera.Muted")   _userPermission = false;
 		}
 		
 		/**
@@ -263,16 +263,20 @@ package ktu.media {
 		 */
 		private function tickCheckPermission(e:TimerEvent):void {
 			var muted:Boolean = (_microphone ? _microphone.muted : (_camera ? _camera.muted : true));
-/*SUCCESS*/ if (!muted) _userPermission = true;// dispatch(MediaPermissionsResult.GRANTED);
-			if (isPermissionDialogClosed()) {	// if box is closed
+            if (!muted) _userPermission = true;
+			if (isPermissionDialogClosed()) {
 				_permissionsDialogClosedCount++;
 				if ( _permissionsDialogClosedCount >= _permissionsDialogClosedMax ) {
-/*FAIL*/			_userPermission = false;//dispatch(MediaPermissionsResult.DENIED);
-                    setDialogIsOpen(false);
+                    if (_dialogIsOpen) dispatchEvent(new MediaPermissionsEvent(MediaPermissionsEvent.DIALOG_STATUS, MediaPermissionsResult.DIALOG_CLOSED));
+                    else _remembered = true;
+                    dispatch(_userPermission ? MediaPermissionsResult.GRANTED : MediaPermissionsResult.DENIED);
 				}
 			} else {
                 _permissionsDialogClosedCount = 0;
-                setDialogIsOpen(true);
+                if (!_dialogIsOpen) {
+                    _dialogIsOpen = true;
+                    dispatchEvent(new MediaPermissionsEvent(MediaPermissionsEvent.DIALOG_STATUS, MediaPermissionsResult.DIALOG_OPEN));
+                }
             }
 		}
 		/**
@@ -304,14 +308,12 @@ package ktu.media {
             dispatchEvent(permissionEvent);
 		}
         private function setDialogIsOpen(value:Boolean):void {
-            if (value != _dialogIsOpen) {
-                _dialogIsOpen = value;
-                if (_dialogIsOpen) {
-                    dispatchEvent(new MediaPermissionsEvent(MediaPermissionsEvent.DIALOG_STATUS, MediaPermissionsResult.DIALOG_OPEN));
-                } else {
-                    dispatchEvent(new MediaPermissionsEvent(MediaPermissionsEvent.DIALOG_STATUS, MediaPermissionsResult.DIALOG_CLOSED));
-                    dispatch(_userPermission ? MediaPermissionsResult.GRANTED : MediaPermissionsResult.DENIED);
-                }
+            _dialogIsOpen = value;
+            if (value) {
+                dispatchEvent(new MediaPermissionsEvent(MediaPermissionsEvent.DIALOG_STATUS, MediaPermissionsResult.DIALOG_OPEN));
+            } else {
+                dispatchEvent(new MediaPermissionsEvent(MediaPermissionsEvent.DIALOG_STATUS, MediaPermissionsResult.DIALOG_CLOSED));
+                dispatch(_userPermission ? MediaPermissionsResult.GRANTED : MediaPermissionsResult.DENIED);
             }
         }
 		/**
