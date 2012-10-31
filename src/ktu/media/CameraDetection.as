@@ -246,7 +246,7 @@ package ktu.media {
 /*INFO*/		dispatchEvent (e);
 			    havePermissions();
 		    } else if (e.code == MediaPermissionsResult.DENIED) {
-/*FAIL*/		dispatch (MediaPermissionsResult.DENIED);
+/*FAIL*/		dispatch (CameraDetectionResult.NO_PERMISSION);
 		    } else if (e.code == MediaPermissionsResult.NO_DEVICE) {
 /*FAIL*/		dispatch (CameraDetectionResult.NO_CAMERAS);
 		    }
