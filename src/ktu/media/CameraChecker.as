@@ -10,6 +10,7 @@
  */
 package ktu.media {
 	
+    import adobe.utils.CustomActions;
     import flash.events.ActivityEvent;
     import flash.events.EventDispatcher;
     import flash.events.TimerEvent;
@@ -46,36 +47,28 @@ package ktu.media {
 		
         protected var _timer				:Timer;                             // the main timer, user for both permissions and camera
 		protected var _timerDelay			:uint		= 100;                  // the default delay for testing the camera
-		protected var _timerRepeatCount		:uint		= 30;                   // the default repeatCount for testing the camera
-		protected var _camFPSAverage		:Number;                            // the average of the fps of the camera we are checking
-		protected var _camActivityInit		:Boolean;			                // whether we have passed the camera's activity init phase
-		protected var _camActivityAverage	:Number; 			                // the average of the activity of the camera we are checking
-		protected var _numTimesGoodCamera	:int		= 0;                    // number of times this camera has shown to work during a single check
-		protected var _minTimesGood			:int 		= 5;                    // the min number of times a camera must respond as working (this is mostly for eliminating delays)
+		protected var _secLengthToCheck		:Number		= 3;                   // the default repeatCount for testing the camera
+        protected var _blackoutDelay        :int        = 0;
         protected var _video				:Video;                             // the video object to use with the camera to test
         protected var _camera               :Camera;
 		protected var _customVideo			:Boolean	= false;
         
-        public function get timerDelay():uint { return _timerDelay; }
-        public function set timerDelay(value:uint):void { _timerDelay = value; }
+        public function get secLengthToCheck():Number { return _secLengthToCheck; }
+        public function set secLengthToCheck(value:Number):void { 
+            if (value < .1) value = .1;
+            _secLengthToCheck = value; 
+        }
         
-        public function get timerRepeatCount():uint { return _timerRepeatCount; }
-        public function set timerRepeatCount(value:uint):void { _timerRepeatCount = value; }
-        
-        public function get minTimesGood():int { return _minTimesGood; }
-        public function set minTimesGood(value:int):void { _minTimesGood = value; }
+        public function get blackoutDelay ():int { return _blackoutDelay; }
+        public function set blackoutDelay (value:int):void { _blackoutDelay = value; }
         
         
         public function check(camera:Camera, video:Video = null):void {
             if (_camera) dispose();
 			_customVideo = Boolean(video);
             _camera = camera;
-            _camActivityInit = true;
-			_camActivityAverage = -1;
-			_camFPSAverage = -1;
-			_numTimesGoodCamera = 0;
 			_camera.addEventListener (ActivityEvent.ACTIVITY, onCamActivity);
-			_video = _customVideo ? video : new Video();
+			_video = video || new Video();
 			_video.attachCamera (_camera);
             constructTimer();
 			_timer.start (); // callback function is tickCheckCamera()
@@ -94,7 +87,6 @@ package ktu.media {
 			}
 			if (_camera) {
                 _camera.removeEventListener (ActivityEvent.ACTIVITY, onCamActivity);
-                _camera = null;
             }
 			if (_timer) disposeTimer();
 		}
@@ -115,19 +107,32 @@ package ktu.media {
 		protected function tickCheckCamera (e:TimerEvent):void {
 			switch (e.type) {
 				case TimerEvent.TIMER:
-					_camFPSAverage = (_camFPSAverage < 0) ? _camera.currentFPS : ((_camFPSAverage * (_timer.currentCount-1)) + _camera.currentFPS) / _timer.currentCount;
-					if (_camActivityInit && (_camera.activityLevel != -1 && _camera.activityLevel < 100)) _camActivityInit = false;
-					else _camActivityAverage = (_camActivityAverage < 0) ? _camera.activityLevel : ((_camActivityAverage * (_timer.currentCount - 1)) + _camera.activityLevel) / _timer.currentCount;
-					if (_camFPSAverage > 0 && _camActivityAverage >= 0) {
-						_numTimesGoodCamera ++;
-/*SUCCESS*/			    if (_numTimesGoodCamera > _minTimesGood) dispatch (CameraDetectionResult.SUCCESS);
-					}
+                    trace((_timer.currentCount * _timer.delay / 1000) + "\t" + _camera.activityLevel + " || " + _camera.currentFPS);
+                    if (_camera.activityLevel > 0 || _camera.currentFPS > 0) {
+                        if (_blackoutDelay > 0) doBlackoutDelay();
+                        else dispatch(CameraDetectionResult.SUCCESS);
+                    }
 					break;
 				case TimerEvent.TIMER_COMPLETE:
-/*FAIL*/			dispatch(CameraDetectionResult.NO_SUCCESS);
+/*FAIL*/			    dispatch(CameraDetectionResult.NO_SUCCESS);
 					break;
 			}
 		}
+        
+        private function doBlackoutDelay():void {
+            _timer.stop();
+            _timer.reset();
+            _timer.delay = _blackoutDelay;
+            _timer.repeatCount = 1;
+            _timer.removeEventListener(TimerEvent.TIMER, tickCheckCamera);
+            _timer.removeEventListener(TimerEvent.TIMER_COMPLETE, tickCheckCamera);
+            _timer.addEventListener(TimerEvent.TIMER_COMPLETE, blackoutDelayComplete);
+            _timer.start();
+        }
+        
+        private function blackoutDelayComplete(e:TimerEvent):void {
+            dispatch(CameraDetectionResult.SUCCESS);
+        }
         
         
         
@@ -137,7 +142,7 @@ package ktu.media {
 		 */
 		protected function constructTimer ():void {
 			if (_timer) disposeTimer();
-			_timer = new Timer (_timerDelay, _timerRepeatCount);
+			_timer = new Timer (_timerDelay, _secLengthToCheck * 1000 / _timerDelay);
 			_timer.addEventListener (TimerEvent.TIMER,          tickCheckCamera);
 			_timer.addEventListener (TimerEvent.TIMER_COMPLETE, tickCheckCamera);
 		}
@@ -149,6 +154,7 @@ package ktu.media {
 			_timer.stop();
 			_timer.removeEventListener (TimerEvent.TIMER,          tickCheckCamera);
 			_timer.removeEventListener (TimerEvent.TIMER_COMPLETE, tickCheckCamera);
+            _timer.removeEventListener (TimerEvent.TIMER_COMPLETE, blackoutDelayComplete);
 			_timer = null;
 		}
         /** @private
