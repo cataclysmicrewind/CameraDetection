@@ -230,20 +230,24 @@ package ktu.media {
          * 
          */
         override public function addEventListener(type:String, listener:Function, useCapture:Boolean = false, priority:int = 0, useWeakReference:Boolean = false):void {
-            getDispatcher(type).addEventListener(type, listener, useCapture, priority, useWeakReference);
+            if (type == MediaPermissionsEvent.DIALOG_STATUS) 
+                _mediaPermissions.addEventListener(type, listener, useCapture, priority, useWeakReference);
+            else super.addEventListener(type, listener, useCapture, priority, useWeakReference);
         }
         override public function removeEventListener(type:String, listener:Function, useCapture:Boolean = false):void {
-            getDispatcher(type).removeEventListener(type, listener, useCapture);
+            if (type == MediaPermissionsEvent.DIALOG_STATUS) 
+                _mediaPermissions.removeEventListener(type, listener, useCapture);
+            else super.removeEventListener(type, listener, useCapture);
         }
         override public function hasEventListener(type:String):Boolean {
-            return getDispatcher(type).hasEventListener(type);
+            if (type == MediaPermissionsEvent.DIALOG_STATUS) 
+                return _mediaPermissions.hasEventListener(type);
+            else return super.hasEventListener(type);
         }
         override public function willTrigger(type:String):Boolean {
-            return getDispatcher(type).willTrigger(type);
-        }
-        private function getDispatcher(type:String):EventDispatcher {
-            if (type == MediaPermissionsEvent.DIALOG_STATUS) return _mediaPermissions;
-            else return super;
+            if (type == MediaPermissionsEvent.DIALOG_STATUS) 
+                return _mediaPermissions.willTrigger(type);
+            else return super.willTrigger(type);
         }
 	    /** @private
 		 *
