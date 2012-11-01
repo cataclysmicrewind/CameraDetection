@@ -72,13 +72,18 @@ package {
 			addChild(video);
 			
 			cd = new CameraDetection (stage);
+            cd.secLengthToCheck = 5;
 			cd.addEventListener (CameraDetectionEvent.RESOLVE, onResolve);
             cd.addEventListener(MediaPermissionsEvent.DIALOG_STATUS, onDialogStatus);
-			cd.begin();
+			cd.begin(video);
             
 		}
         private function onDialogStatus (e:MediaPermissionsEvent):void {
-            trace(e.code);
+            if (e.code == MediaPermissionsResult.DIALOG_OPEN) {
+                trace("dialog opened");
+            } else if (e.code == MediaPermissionsResult.DIALOG_CLOSED) {
+                trace("dialog closed");
+            }
         }
 		private function onResolve(e:CameraDetectionEvent):void {
 			switch (e.code) {
