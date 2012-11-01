@@ -264,7 +264,6 @@ package ktu.media {
 	    private function onMediaPermissionsResolve(e:MediaPermissionsEvent):void {
 		    _rememberedPermissions = e.remembered;
 		    if (e.code == MediaPermissionsResult.GRANTED) {
-/*INFO*/		dispatchEvent (e);
 			    havePermissions();
 		    } else if (e.code == MediaPermissionsResult.DENIED) {
 /*FAIL*/		dispatch (CameraDetectionResult.NO_PERMISSION);
