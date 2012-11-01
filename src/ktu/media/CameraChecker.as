@@ -106,7 +106,6 @@ package ktu.media {
 		protected function tickCheckCamera (e:TimerEvent):void {
 			switch (e.type) {
 				case TimerEvent.TIMER:
-                    trace((_timer.currentCount * _timer.delay / 1000) + "\t" + _camera.activityLevel + " || " + _camera.currentFPS);
                     if (_camera.activityLevel > 0 || _camera.currentFPS > 0) {
                         if (_blackoutDelay > 0) doBlackoutDelay();
                         else dispatch(CameraDetectionResult.SUCCESS);
