@@ -1,6 +1,6 @@
 /**
  * author:	ktu; 							[blog.cataclysmicrewind.com]
- * updated:	2012.10.06;
+ * updated:	2012.10.31;
  * 
  * This class is free to use and modify, however I request that the header (except example code),
  * and original package remain intact.
@@ -10,7 +10,6 @@
  */
 package ktu.media {
 	
-    import adobe.utils.CustomActions;
     import flash.events.ActivityEvent;
     import flash.events.EventDispatcher;
     import flash.events.TimerEvent;
