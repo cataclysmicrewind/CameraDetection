@@ -11,15 +11,13 @@
  */
 package ktu.media {
 	
-    import adobe.utils.CustomActions;
-	import flash.display.Stage;
-    import flash.events.Event;
-	import flash.events.EventDispatcher;
-	import flash.media.Camera;
-	import flash.media.Video;
-	import ktu.events.CameraDetectionEvent;
-	import ktu.events.MediaPermissionsEvent;
-	import ktu.media.MediaPermissions;
+    import flash.display.Stage;
+    import flash.events.EventDispatcher;
+    import flash.media.Camera;
+    import flash.media.Video;
+    import ktu.events.CameraDetectionEvent;
+    import ktu.events.MediaPermissionsEvent;
+    import ktu.media.MediaPermissions;
 	
 	
 	
@@ -113,29 +111,28 @@ package ktu.media {
 		protected var _mediaPermissions			:MediaPermissions = new MediaPermissions();
         protected var _cCheck               	:CameraChecker = new CameraChecker();
 		protected var _customVideo				:Video;
+        protected var _cameraMode               :Object = { };  // width, height, fps, favorArea
         
-		/**
-		 * repeatCount property of the timer used while checking a Camera object										<br>
-		 *
-		 * This value along with the detectionDelay property will determine how long this object will spend
-		 * checking each Camera object.
-		 */
-		public function get detectionRepeatCount():uint { return _cCheck.timerRepeatCount; }
-		public function set detectionRepeatCount(value:uint):void { _cCheck.timerRepeatCount = value; }
 		/**
 		 * delay property of the timer used while checking a Camera object												<br>
 		 *
 		 * This value along with the detectionRepeatCount property will determine how long this object will spend
 		 * checking each Camera object.
 		 */
-		public function get detectionDelay():uint { return _cCheck.timerDelay; }
-		public function set detectionDelay (value:uint):void { _cCheck.timerDelay = value; }
+		public function get secLengthToCheck ():Number { return _cCheck.secLengthToCheck; }
+		public function set secLengthToCheck (value:Number):void { _cCheck.secLengthToCheck = value; }
         /**
          * delay for the timer while checking permissions. this is likley to not need changing, but it is still
          * an option.
          */
         public function get permissionsDelay():uint { return _mediaPermissions.timerDelay; }
         public function set permissionsDelay(value:uint):void { _mediaPermissions.timerDelay = value; }
+        
+        /**
+         * length of time in ms to wait after finding a good camera. after this time, it will dispatch a good camera
+         */
+        public function get blackoutDelay():uint { return _cCheck.blackoutDelay; }
+        public function set blackoutDelay(value:uint):void { _cCheck.blackoutDelay = value; }
         /**
          * property telling wether the user had previously chosen 'remember my decision' in the settings dialog.
          *
@@ -167,6 +164,12 @@ package ktu.media {
         
         public function get stage():Stage { return _stage; }
         public function set stage(value:Stage):void { _stage = value; }
+        
+        /**
+         * an object with these values: width, height, fps, favorArea
+         */
+        public function get cameraMode():Object { return _cameraMode; }
+        public function set cameraMode(value:Object):void { _cameraMode = value; }
 		
         
         
@@ -222,11 +225,25 @@ package ktu.media {
             _cCheck.dispose();
 			_stage = null;
 		}
+        /*
+         * 
+         * 
+         */
         override public function addEventListener(type:String, listener:Function, useCapture:Boolean = false, priority:int = 0, useWeakReference:Boolean = false):void {
-            if (type == MediaPermissionsEvent.DIALOG_STATUS || type == MediaPermissionsEvent.RESOLVE)
-                return _mediaPermissions.addEventListener(type, listener, useCapture, priority, useWeakReference);
-            else
-                super.addEventListener(type, listener, useCapture, priority, useWeakReference);
+            getDispatcher(type).addEventListener(type, listener, useCapture, priority, useWeakReference);
+        }
+        override public function removeEventListener(type:String, listener:Function, useCapture:Boolean = false):void {
+            getDispatcher(type).removeEventListener(type, listener, useCapture);
+        }
+        override public function hasEventListener(type:String):Boolean {
+            return getDispatcher(type).hasEventListener(type);
+        }
+        override public function willTrigger(type:String):Boolean {
+            return getDispatcher(type).willTrigger(type);
+        }
+        private function getDispatcher(type:String):EventDispatcher {
+            if (type == MediaPermissionsEvent.DIALOG_STATUS) return _mediaPermissions;
+            else return super;
         }
 	    /** @private
 		 *
@@ -246,7 +263,7 @@ package ktu.media {
 /*INFO*/		dispatchEvent (e);
 			    havePermissions();
 		    } else if (e.code == MediaPermissionsResult.DENIED) {
-/*FAIL*/		dispatch (MediaPermissionsResult.DENIED);
+/*FAIL*/		dispatch (CameraDetectionResult.DENIED);
 		    } else if (e.code == MediaPermissionsResult.NO_DEVICE) {
 /*FAIL*/		dispatch (CameraDetectionResult.NO_CAMERAS);
 		    }
@@ -258,6 +275,7 @@ package ktu.media {
 		 */
 		protected function havePermissions():void {
             var camera:Camera = Camera.getCamera ();
+            setCameraMode(camera);
 			_defaultCameraName = camera.name;
             _cCheck.addEventListener(CameraDetectionEvent.RESOLVE, onCChecker);
             _cCheck.check(camera, _customVideo);
@@ -288,6 +306,9 @@ package ktu.media {
 				else _cCheck.check(camera, _customVideo);
 /*FAIL*/	} else dispatch (CameraDetectionResult.NO_SUCCESS);
 		}
+        protected function setCameraMode(camera:Camera):void {
+            camera.setMode(_cameraMode.width || 160, _cameraMode.height || 120, _cameraMode.fps || 15, _cameraMode.favorArea || true);
+        }
 		/** @private
 		 *
 		 * 	This function will dispatch the proper event, then dispose of itself
