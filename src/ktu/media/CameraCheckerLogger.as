@@ -44,7 +44,7 @@ package ktu.media {
 			_log.name = camera.name
 			_log.startTime = getTimer();
 			_log.timerDelay = _timerDelay;
-			_log.timerRepeatCount = _timerRepeatCount;
+			_log.timerRepeatCount = _secLengthToCheck;
 			_log.minTimesGood = _minTimesGood;
 			_log.cameraActivityInitCompleteTick = -1;
 			_log.cameraActivityAverage = -1;

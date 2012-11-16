@@ -238,11 +238,9 @@ package ktu.media {
 		
 		
 		private function privacyDialogPermissions(mediaType:Class):void {
-			if (mediaType == Camera) {
-				_camera = Camera.getCamera();
-			} else if (mediaType == Microphone) {
-				_microphone = Microphone.getMicrophone();
-			} else {
+			if      (mediaType == Camera)     _camera = Camera.getCamera();
+			else if (mediaType == Microphone) _microphone = Microphone.getMicrophone();
+			else {
 				if (isMicrophoneAvailable()) _microphone = Microphone.getMicrophone();
 				else if (isCameraAvailable()) _camera = Camera.getCamera();
 			}
@@ -258,7 +256,10 @@ package ktu.media {
 		 * keeps checking the status of the Microphone.muted / Camera.muted. 
 		 * If .muted = false, then we have permission.
 		 * If not, we check to see if the dialog is closed,
-		 * If it is closed, then we did not get permission
+		 * if closed, wait for the count and then
+         * if it did open, dispatch that it closed
+         * and always dispatch result
+         * if it is open, if it wasn't before tell everyone it is
 		 * 
 		 */
 		private function tickCheckPermission(e:TimerEvent):void {
@@ -307,15 +308,6 @@ package ktu.media {
             dispose();
             dispatchEvent(permissionEvent);
 		}
-        private function setDialogIsOpen(value:Boolean):void {
-            _dialogIsOpen = value;
-            if (value) {
-                dispatchEvent(new MediaPermissionsEvent(MediaPermissionsEvent.DIALOG_STATUS, MediaPermissionsResult.DIALOG_OPEN));
-            } else {
-                dispatchEvent(new MediaPermissionsEvent(MediaPermissionsEvent.DIALOG_STATUS, MediaPermissionsResult.DIALOG_CLOSED));
-                dispatch(_userPermission ? MediaPermissionsResult.GRANTED : MediaPermissionsResult.DENIED);
-            }
-        }
 		/**
 		 * 	this functions prepares the object for garbage collection.
          *  this will stop any logic from occuring and will prevent any results from firing.

@@ -72,10 +72,6 @@ package {
 		private function init(e:Event = null):void {
 			removeEventListener(Event.ADDED_TO_STAGE, init);
 			//
-			//stage.addEventListener(MouseEvent.CLICK, onClick);
-			Style.setStyle(Style.KTU);
-			
-			
 			
 			var accordion:PermissionTestAccordion = new PermissionTestAccordion(this, 20, 10);
 			accordion.width = 170;
@@ -120,7 +116,6 @@ package {
 		}
 		
 		private function onPermissionsResolve(e:MediaPermissionsEvent):void {
-            if (e.remembered) output.log("user 'remembered' their decision");
             var log:String = "MediaPermissionsResult.";
             switch (e.code) {
                 case MediaPermissionsResult.GRANTED :
@@ -133,6 +128,7 @@ package {
                     log += "NO_DEVICE";
                     break;
             }
+            log += e.remembered ? " - remembered" : "";
             output.log(log);
 		}
         private function onDialogStatus(e:MediaPermissionsEvent):void {
