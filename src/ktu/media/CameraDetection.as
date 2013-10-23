@@ -13,8 +13,10 @@ package ktu.media {
 	
     import flash.display.Stage;
     import flash.events.EventDispatcher;
+    import flash.external.ExternalInterface;
     import flash.media.Camera;
     import flash.media.Video;
+    
     import ktu.events.CameraDetectionEvent;
     import ktu.events.MediaPermissionsEvent;
     import ktu.media.MediaPermissions;
@@ -112,10 +114,11 @@ package ktu.media {
         protected var _cCheck               	:CameraChecker = new CameraChecker();
 		protected var _customVideo				:Video;
         protected var _cameraMode               :Object = { };  // width, height, fps, favorArea
-        
+        protected var browserCheckNeeded				:Boolean = false;
+		protected var callHavePermissionsWhenBrowserCheckComplete : Boolean = false;
 		/**
 		 * delay property of the timer used while checking a Camera object												<br>
-		 *
+		 * 
 		 * This value along with the detectionRepeatCount property will determine how long this object will spend
 		 * checking each Camera object.
 		 */
@@ -211,6 +214,11 @@ package ktu.media {
             _mediaPermissions.stage = _stage;
             _mediaPermissions.addEventListener(MediaPermissionsEvent.RESOLVE, onMediaPermissionsResolve);
             _mediaPermissions.getPermission(Camera);
+			
+			if( ChromeCameraDetectionHelper.isPepperPlayer ){
+				browserCheckNeeded = true;
+				ChromeCameraDetectionHelper.triggerBrowserWebcamPrompt( onPepperPlayerSuccess, onPepperPlayerFailure );
+			}
 		}
 		/**
 		 * disposes of all objects holding memory in this class																				<br>
@@ -263,8 +271,12 @@ package ktu.media {
 		 */
 	    private function onMediaPermissionsResolve(e:MediaPermissionsEvent):void {
 		    _rememberedPermissions = e.remembered;
-		    if (e.code == MediaPermissionsResult.GRANTED) {
-			    havePermissions();
+			
+			if (e.code == MediaPermissionsResult.GRANTED) {
+			    if( !browserCheckNeeded ) havePermissions();
+				else {
+					callHavePermissionsWhenBrowserCheckComplete = true; 
+				}
 		    } else if (e.code == MediaPermissionsResult.DENIED) {
 /*FAIL*/		dispatch (CameraDetectionResult.NO_PERMISSION);
 		    } else if (e.code == MediaPermissionsResult.NO_DEVICE) {
@@ -320,6 +332,18 @@ package ktu.media {
 		protected function dispatch (result:String, camera:Camera = null, video:Video = null):void {
 			dispose ();
             dispatchEvent (new CameraDetectionEvent (CameraDetectionEvent.RESOLVE, camera, result, video));
+		}
+		
+		protected function onPepperPlayerSuccess():void
+		{
+			browserCheckNeeded = false;
+			if( callHavePermissionsWhenBrowserCheckComplete ) havePermissions();
+		}
+		
+		protected function onPepperPlayerFailure():void
+		{
+			browserCheckNeeded = false;
+			if( callHavePermissionsWhenBrowserCheckComplete ) havePermissions();
 		}
 	}
 }
